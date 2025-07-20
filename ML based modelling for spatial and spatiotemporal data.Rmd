@@ -255,18 +255,39 @@ ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
 XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large datasets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ``` {r xgboost}
+
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
 
 # Set training control
 control <- trainControl(method = "cv", number = 10, verboseIter = FALSE)
 
+# Define hyperparameter tuning grid (optional but recommended)
+xgb_grid <- expand.grid(
+  nrounds = 100,
+  max_depth = 6,
+  eta = 0.3,
+  gamma = 0,
+  colsample_bytree = 1,
+  min_child_weight = 1,
+  subsample = 1
+)
+
 # Train the XGBoost model using caret
 set.seed(100)
 model_xgb <- train(x = trainDat[, predictors],
                    y = trainDat[, response],
                    method = "xgbTree",
-                   trControl = control)
+                   trControl = control,
+                   tuneGrid = xgb_grid)
+
+# Basic model validation
+if (is.null(model_xgb$finalModel)) stop("XGBoost model training failed.")
+if (is.null(model_xgb$results)) stop("No results returned.")
+
+# View best hyperparameters
+print(model_xgb$bestTune)
+
 ```
 
 ``` {r xgb_summary, echo=TRUE, message=FALSE}
@@ -287,14 +308,6 @@ importance_df_xgb <- importance_df_xgb %>%
 # Check the summary of the importance data frame
 kable(importance_df_xgb, caption = "Variable Importance for XGBoost Model") %>%
   kable_styling(full_width = F, position = "left")
-
-# View top variables
-kable(head(importance_df_xgb, 10), caption = "Top 10 Variables for XGBoost Model") %>%
-  kable_styling(full_width = F, position = "left")
-
-# Visualize variable importance
-vip::vip(model_xgb, num_features = 10) +
-  labs(title = "Variable Importance for XGBoost Model")
 
 # Visualize variable importance using ggplot2
 ggplot(model_xgb$results, aes(x = reorder(Variable, Importance), y = Importance)) +
