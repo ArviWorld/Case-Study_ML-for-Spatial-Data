@@ -262,7 +262,7 @@ trainDat[, response] <- as.factor(trainDat[, response])
 control <- trainControl(method = "cv", number = 10, verboseIter = FALSE)
 
 # Train the XGBoost model using caret
-set.seed(123)
+set.seed(100)
 model_xgb <- train(x = trainDat[, predictors],
                    y = trainDat[, response],
                    method = "xgbTree",
@@ -304,7 +304,6 @@ ggplot(model_xgb$results, aes(x = reorder(Variable, Importance), y = Importance)
        x = "Variables",
        y = "Importance") +
   theme_minimal()
-
 
 ```
 
