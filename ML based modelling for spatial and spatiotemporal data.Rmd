@@ -29,8 +29,8 @@ output:
   - [Random Forest](#random-forest)
   - [XGBoost](#xgboost)
   - [Support Vector Machine (SVM)](#support-vector-machine-svm)
-  - [Model Comparison](#model-comparison)
 - [Results](#results)
+  - [Model Comparison](#model-comparison)
   - [Confusion Matrices](#confusion-matrices)
   - [Accuracy Comparison](#accuracy-comparison)
   - [Spatial Predictions](#spatial-predictions)
@@ -177,11 +177,29 @@ ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
        color = "Land Cover Class") +
   theme_minimal()
 ```
-The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
+The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. The other feat
+Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
 
 
 # Machine Learning Model
 The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
+
+**Selecting predictor and response variable**
+Before building the ML models, we need to select the predictor variables (the Sentinel bands and indices) and the response variable (the land cover class). The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
+
+```{r select_vars}
+
+# Select predictor variables (Sentinel bands and indices)
+predictors <- c("B02", "B03", "B04", "B05", "B06", "B07", "B08", "NDVI", "yellowness")
+
+# Select response variable (land cover class)
+response <- 'Class'
+
+```
+
+
+
+
 
 ## Random Forest
 Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis.  
