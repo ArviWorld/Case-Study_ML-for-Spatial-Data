@@ -1,0 +1,208 @@
+---
+title:  "Land cover classification with ML in R"
+subtitle: "Example of the Banks Peninsula in New Zealand"
+author: "Dr. Hanna Meyer"
+worked_by: "Aravindh Venkatraman"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: 
+    highlight: tango
+    latex_engine: xelatex
+    number_sections: yes
+    toc: yes
+    toc_depth: 6
+  word_document: 
+    toc: yes
+    toc_depth: '6'
+  html_document: default
+  always_allow_html: yes
+---
+
+
+# Table of Contents
+- [Introduction](#introduction)
+- [Aim of this Project](#aim-of-this-project)
+- [Methods](#methods)
+  - [Data Loading](#data-loading)
+  - [Data Pre-processing](#data-pre-processing)
+- [Machine Learning Model](#machine-learning-model)
+  - [Random Forest](#random-forest)
+  - [XGBoost](#xgboost)
+  - [Support Vector Machine (SVM)](#support-vector-machine-svm)
+  - [Model Comparison](#model-comparison)
+- [Results](#results)
+  - [Confusion Matrices](#confusion-matrices)
+  - [Accuracy Comparison](#accuracy-comparison)
+  - [Spatial Predictions](#spatial-predictions)
+- [Discussion](#discussion)
+  - [Performance Comparison](#performance-comparison)
+  - [Strengths and Weaknesses](#strengths-and-weaknesses)
+  - [Uncertainty Insights](#uncertainty-insights)
+
+
+# Introduction
+The tutorial project demonstrates how to perform land cover classifications in R using machine learning algorithms such as Random Forests, XGBoost, and SVM, and compares their performance. This tutorial was presented by Dr. Hanna Meyer in July 2018. This tutorial has been adapted by Aravindh Venkatraman to include additional machine learning models for comparison. 
+The focus is on land cover classification using Sentinel satellite data, specifically targeting the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula. This plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmland since with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control. 
+To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field samplings mean huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this tutorial, we're going to use Sentinel satellite imagery from 2017 to map the current distribution on a section of the Banks Peninsula.
+
+# Aim of this Project
+The technical aim of the tutorial project is to show land cover classifications, based on satellite data, can be performed in R using machine learning algorithms such as Random Forests, XGBoost and SVM. We show its performance and compare the results of the models. 
+
+# Methods
+This tutorial will guide you through the process of land cover (LC) classification using machine learning techniques in R. The focus is on classifying land cover types, particularly the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data. The steps include data loading, pre-processing, model training, and evaluation.
+
+## Load required libraries
+We select and load the libraries and packages that are needed for this LC classification project. The selected libraries provide functions for handling raster data, reading shapefiles, performing machine learning tasks, and visualizing results.
+
+```{r} start, include=FALSE}
+rm(list=ls())
+library(raster)
+library(caret)
+library(mapview)
+library(sf)
+library(randomForest)
+library(xgboost)
+library(e1071)
+library(ggplot2)
+library(dplyr)
+library(rgdal)
+library(rpart)
+library(ranger)
+library(terra)
+library(DALEX)
+library(vip)
+library(pROC)
+
+```
+
+## Data Loading and Pre-processing
+### Load and explore the data
+To start with, let's load the Sentinel data as well as a shapefile of the training sites.                            
+
+```{r load}
+
+# Load Sentinel data
+sentinel <- stack("D:\\Study\\Machine Learning\\Geostatistics\\R-Git\\Case-Study_ML-for-Spatial-Data\\Data\\sentinel2017.grd")
+
+# Load training sites shapefile
+training <- read_sf("D:\\Study\\Machine Learning\\Geostatistics\\R-Git\\Case-Study_ML-for-Spatial-Data\\Data\\trainingSites.shp")
+
+# Visualize the Sentinel data
+print(sentinel)
+print(training)
+
+```
+**Overview of the data:**
+- The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products).
+- The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
+
+**Visualize the data:**
+We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
+
+```{r visMV, warning=FALSE, message= FALSE}
+
+# Visualize Sentinel data with training sites
+viewRGB(sentinel, r = 3, g = 2, b = 1, map.types = "Esri.WorldImagery") +
+  mapview(training)
+
+```
+### Data Pre-processing
+We need to prepare the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the shapefile. This step is crucial for training the machine learning model. Then, we split the data into training and test datasets to ensure that we can evaluate the model's performance on unseen data.
+
+**Extract raster information**
+In order to train the Machine Learning model between the spectral properties and the land cover class, we first need to create a data frame that contains the spectral properties of the training sites as well as the corresponding class information.
+This data frame can be produced with the `extract` function. The resulting data frame contains the Sentinel data for each pixel overlayed by the polygons. This data frame then still needs to be merged with the information on the land cover class from the shapefile. This happens via the ID of the polygons which are given in the extracted data frame by the column "ID" and in the shapefile by the attribute "id".
+
+```{r extract}
+
+# Extract raster values for training sites
+extr <- extract(sentinel, training, df=TRUE)
+
+# Merge extracted data with training sites
+extr <- merge(extr, training, by.x="ID", by.y="id")
+head(extr)
+
+```
+
+**Split data**
+In order to keep data for a later (nearly) independent validation as well as to limit the number of data points so that the model training won't take long time, we split the total data set into 30% training data and 70% test data. Caret's `createDataPartition` takes care that the class distribution is the same in both datasets. We put the test data to the side and first only continue with the training data.
+
+```{r split}
+
+# Set seed for reproducibility
+set.seed(100)
+
+# Create training and test datasets
+trainids <- createDataPartition(extr$Class, list=FALSE, p=0.3)
+trainDat <- extr[trainids,]
+testDat <- extr[-trainids,]
+
+```
+
+**Visualize relationships**
+To get an idea about the relationships between the spectral Sentinel data and the land cover class, we can visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
+
+```{r vis_relationships}
+
+# Visualize relationships (box plot) between yellowness index and land cover class
+ggplot(trainDat, aes(x = factor(Class), y = yellowness)) +
+  geom_boxplot() +
+  labs(title = "Yellowness Index by Land Cover Class",
+       x = "Land Cover Class",
+       y = "Yellowness Index") +
+  theme_minimal()
+
+# Visualize relationships (box plot) between NDVI and land cover class
+ggplot(trainDat, aes(x = factor(Class), y = NDVI)) +
+  geom_boxplot() +
+  labs(title = "NDVI by Land Cover Class",
+       x = "Land Cover Class",
+       y = "NDVI") +
+  theme_minimal()
+
+```
+The box plots show the distribution of the yellowness index and NDVI for each land cover class, providing insights into how these indices vary across different classes. The Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values.  
+
+**Feature Plot**
+We can also get an impression about the separability of the classes by creating a feature plot that visualizes the location of the training samples in a scatter plot of two Sentinel channels. 
+
+```{r featurePlot}
+
+# Create feature plot to visualize relationships between Sentinel channels (B08 vs yellowness) and land cover class
+ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
+  geom_point() +
+  labs(title = "Feature Plot: Sentinel Band 8 vs Yellowness",
+       x = "Sentinel Band 8 (NIR)",
+       y = "Sentinel Band Yellowness",
+       color = "Land Cover Class") +
+  theme_minimal()
+```
+The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
+
+
+# Machine Learning Model
+The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
+
+## Random Forest
+Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis.  
+
+
+## Methods
+ML algorithms, spatial prediction.
+
+## Results
+Confusion matrices, accuracy comparison plots, maps.
+
+## Discussion
+Performance comparison, strengths/weaknesses, uncertainty insights.
+
+
+
+
+
+
+
+
+
+
+
