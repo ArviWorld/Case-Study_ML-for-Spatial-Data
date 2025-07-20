@@ -215,6 +215,42 @@ print(model_rf)
 
 ```
 
+## XGBoost
+XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large datasets. 
+Training the XGBoost model using the `xgboost` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+
+```{r xgboost}
+
+# Train XGBoost model
+set.seed(100)
+model_xgb <- train(trainDat[, predictors], trainDat[, response], 
+                   method = "xgbTree", 
+                   trControl = trainControl(method = "cv", number = 10), 
+                   importance = TRUE)
+
+# Print model summary
+print(model_xgb)
+
+```
+
+
+## Support Vector Machine (SVM)
+Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis.
+Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+
+```{r svm}
+
+# Train Support Vector Machine (SVM) model
+set.seed(100)
+model_svm <- train(trainDat[, predictors], trainDat[, response], 
+                   method = "svmRadial", 
+                   trControl = trainControl(method = "cv", number = 10), 
+                   importance = TRUE)
+
+# Print model summary
+print(model_svm)
+
+```
 
 ## Methods
 ML algorithms, spatial prediction.
