@@ -136,7 +136,7 @@ head(extr)
 set.seed(100)
 
 # Create training and test dataset
-trainids <- createDataPartition(extr$Class, list=FALSE, p=0.3)
+trainids <- createDataPartition(extr$Class, list=FALSE, p=0.7)
 trainDat <- extr[trainids,]
 testDat <- extr[-trainids,]
 
@@ -204,12 +204,13 @@ predictors <- c("B02", "B03", "B04", "B05", "B06", "B07", "B08", "NDVI", "yellow
 # Select response variable (land cover class)
 response <- 'Class'
 
-# Check the class imbalance
+# Check for class imbalance
+table(trainDat$Class)
+prop.table(trainDat$Class)
 
 ```
 
 ## Random Forest {#random-forest}
-
 Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis.
 
 Training the Random Forest model using the `randomForest` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
@@ -419,6 +420,8 @@ cm_plot_xgb <- ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y =
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+cm_plot_xgb
+
 # Print scoring metrics
 kable(confusion_xgb$overall, caption = "Scoring Metrics for XGBoost Model") %>%
   kable_styling(full_width = F, position = "left")
@@ -606,7 +609,6 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
 ```
 
 **Discussions - Model Performance**
@@ -641,7 +643,7 @@ plot_variable_importance <- function(explainer) {
 plots <- lapply(explainers, plot_variable_importance)
 
 # Plot variable importance for each model
-grid.arrange(grobs = plots, ncol = 1)
+ggplot(plots)
 
 # Plot model predictions
 plot_model_predictions <- function(explainer) {
@@ -657,7 +659,7 @@ plot_model_predictions <- function(explainer) {
 plots_predictions <- lapply(explainers, plot_model_predictions)
 
 # Plot model predictions for each model
-grid.arrange(grobs = plots_predictions, ncol = 1)
+plots_predictions
 
 ```
 
