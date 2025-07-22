@@ -200,7 +200,8 @@ The feature plot shows the distribution of training samples in the feature space
 # Machine Learning Model {#machine-learning-model}
 The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
 
-**Selecting predictor and response variable** Before building the ML models, we need to select the predictor variables (the Sentinel bands and indices) and the response variable (the land cover class). The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
+**Selecting predictor and response variable** 
+Before building the ML models, we need to select the predictor variables (the Sentinel bands and indices) and the response variable (the land cover class). The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
 
 ```{r select_vars}
 
@@ -286,7 +287,7 @@ The Random Forest model has been trained successfully, and we can see the variab
 **Predicting the test data and using confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
-```{r rf_confusion_matrix}
+```{r rf_confusion_matrix, echo=TRUE, warning=FALSE}
 
 # Predict on the test dataset
 predictions_rf <- predict(model_rf, newdata = testDat[, predictors])
@@ -395,7 +396,7 @@ ggplot(importance_df_xgb, aes(x = Variable, y = Gain)) +
 
 ```
 
-**Confusion matrix and Scoring metrics on the test data** 
+**Predicting the test data and using confusion matrix and scoring metrics* 
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r xgb_confusion_matrix}
@@ -442,7 +443,7 @@ Confusion Matrix and scoring metrics provide insights into the performance of th
 ## Support Vector Machine (SVM) {#support-vector-machine-svm}
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
-```{r svm}
+```{r svm, echo=TRUE, warning=FALSE}
 
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
@@ -467,9 +468,9 @@ control <- trainControl(
 set.seed(100)
 model_svm <- train(trainDat[, predictors], trainDat[, response], 
                    method = "svmRadial", 
-                   trControl = control, 
-                   tuneGrid = svm_grid,
-                   preProcess = c("center", "scale", "zv"))
+                   trControl = trainControl(method = "cv", number = 10), 
+                   tuneGrid = svm_grid)
+
 
 ```
 
@@ -507,7 +508,7 @@ ggplot(importance_svm, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 ```
 
-**Confusion matrix and Scoring metrics on the test data** 
+**Predicting the test data and using confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r svm_confusion_matrix}
@@ -523,7 +524,7 @@ predictions_svm <- factor(predictions_svm, levels = true_levels_svm)
 actual_svm <- factor(testDat[[response]], levels = true_levels_svm)
 
 # Construct the confusion matrix
-confusion_svm <- confusionMatrix(predictions_svm, actual_svm)
+confusion_svm <- caret::confusionMatrix(predictions_svm, actual_svm)
 
 # Plot confusion matrix
 cm_plot_svm <- ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
@@ -601,9 +602,17 @@ scoring_df <- data.frame(
     mean(confusion_xgb$byClass[,"F1"]), 
     mean(confusion_svm$byClass[,"F1"]))
 )
+
 # Print the scoring metrics data frame
 kable(scoring_df, caption = "Scoring Metrics for Each Model") %>%
   kable_styling(full_width = F, position = "left")
+
+# Set the order for the plot
+scoring_df$Model <- factor(scoring_df$Model,
+                           levels = 
+                             c('Random Forest',
+                             'XGBoost',
+                             'Support Vector Machine'))
 
 # Plot the scoring metrics for each model
 scoring_df_long <- melt(scoring_df, id.vars = "Model")
@@ -646,8 +655,6 @@ residual_plots <- lapply(explainers, plot_model_residuals)
 # Residual plots
 for (p in residual_plots) print(p)
 
-
-
 ```
 
 ### Predicted Maps by the Model
@@ -655,21 +662,52 @@ To visualize the spatial predictions made by each model, we can create maps that
 
 ```{r spatial_predictions, echo=FALSE, message=FALSE}
 
-# Construct the sentinel image (normal map)
-viewRGB(sentinel, r = 3, g = 2, b = 1, map.types = "Esri.WorldImagery")
+# Stacking Sentinel bands + indices
+predictors_stack <- stack(sentinel$B02, 
+                          sentinel$B03, 
+                          sentinel$B04, 
+                          sentinel$B05,
+                          sentinel$B06, 
+                          sentinel$B07, 
+                          sentinel$B08,
+                          sentinel$NDVI, 
+                          sentinel$yellowness)
+
+# Convert raster stack to dataframe (pixel wise)
+all_pixels_df <- as.data.frame(predictors_stack, na.rm = FALSE)
+
+# Predict for all raster cells
+predictions_rf_all <- predict(model_rf, newdata = all_pixels_df)
+predictions_xbg_all <- predict(model_xgb, newdata = all_pixels_df)
+predictions_svm_all <- predict(model_svm, newdata = all_pixels_df)
 
 # Create a function to plot spatial predictions for each model
-plot_spatial_predictions <- function(predictions, title) {
+plot_spatial_predictions <- function(predictions, reference_raster, title) {
+  # Create a raster template with same dimensions and extent as reference (e.g. sentinel)
+  pred_raster <- raster(reference_raster)
+   # Safety check: make sure prediction length matches raster cells
+  if (length(predictions) != ncell(pred_raster)) {
+    stop("Length of predictions does not match number of raster cells.")
+  }
   # Convert predictions to a raster
-  pred_raster <- raster(predictions)
+  value(pred_raster) <- as.numeric(predictions)
   # Plot the raster with a color palette
-  plot(pred_raster, main = title, col = terrain.colors(10), axes = FALSE, box = FALSE)
+  plot(pred_raster, main = title,
+       col = terrain.colors(length(unique(predictions))), 
+       axes = FALSE, box = FALSE)
 }
 
+# Base map
+viewRGB(sentinel, r = 3, g = 2, b = 1, map.types = "Esri.WorldImagery")
+
 # Plot spatial predictions for each model
-plot_spatial_predictions(predictions_rf, "Random Forest Predictions")
-plot_spatial_predictions(predictions_xgb, "XGBoost Predictions")
-plot_spatial_predictions(predictions_svm, "Support Vector Machine Predictions")
+par(mfrow = c(1, 3))  # 3 plots in one row
+
+plot_spatial_predictions(predictions_rf, sentinel, "Random Forest")
+plot_spatial_predictions(predictions_xgb, sentinel, "XGBoost")
+plot_spatial_predictions(predictions_svm, sentinel, "SVM")
+
+par(mfrow = c(1, 1))  # Reset to default
 
 ```
 
