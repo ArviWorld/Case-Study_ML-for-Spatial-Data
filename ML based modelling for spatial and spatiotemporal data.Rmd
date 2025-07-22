@@ -204,6 +204,8 @@ predictors <- c("B02", "B03", "B04", "B05", "B06", "B07", "B08", "NDVI", "yellow
 # Select response variable (land cover class)
 response <- 'Class'
 
+# Check the class imbalance
+
 ```
 
 ## Random Forest {#random-forest}
@@ -213,7 +215,6 @@ Random Forest is a popular ensemble learning method that constructs multiple dec
 Training the Random Forest model using the `randomForest` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r random_forest}
-
 
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
@@ -357,10 +358,6 @@ model_xgb <- train(x = trainDat[, predictors],
                    method = "xgbTree",
                    trControl = control,
                    tuneGrid = xgb_grid)
-
-# Basic model validation
-if (is.null(model_xgb$finalModel)) stop("XGBoost model training failed.")
-if (is.null(model_xgb$results)) stop("No results returned.")
   
 ```
 
@@ -529,6 +526,9 @@ cm_plot_svm <- ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y =
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+# Plot Confusion Matrix
+cm_plot_svm
+
 # Print scoring metrics
 kable(confusion_svm$overall, caption = "Scoring Metrics for Support Vector Machine Model") %>%
   kable_styling(full_width = F, position = "left")
@@ -668,6 +668,7 @@ To visualize the spatial predictions made by each model, we can create maps that
 
 # Create a function to plot spatial predictions for each model
 plot_spatial_predictions <- function(predictions, title) {
+  
   # Convert predictions to a raster
   pred_raster <- raster(predictions)
   
