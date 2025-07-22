@@ -214,11 +214,31 @@ Training the Random Forest model using the `randomForest` package in R. The mode
 
 ```{r random_forest}
 
+
+# Ensure response is a factor
+trainDat[, response] <- as.factor(trainDat[, response])
+
+# Define hyperparameter tuning grid 
+rf_grid <- expand.grid(
+  mtry = c(2, 3, 4),    # Number of variables randomly sampled at each split
+  splitrule = "gini",   # Splitting rule
+  min.node.size = c(1, 5) # Minimum size of terminal nodes
+)
+
+# Setting train control
+control <- trainControl(
+  method = "cv",         # k-fold CV
+  number = 10,           # 10-fold
+  summaryFunction = multiClassSummary,  # for multiclass metrics
+  classProbs = TRUE,
+  savePredictions = "final"
+)
+
 # Train Random Forest model
 set.seed(100)
 model_rf <- train(trainDat[, predictors], trainDat[, response], 
                   method = "rf", 
-                  trControl = trainControl(method = "cv", number = 10), 
+                  trControl = control, 
                   importance = TRUE)
 
 ```
@@ -309,9 +329,6 @@ XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation o
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
 
-# Set training control
-control <- trainControl(method = "cv", number = 10, verboseIter = FALSE)
-
 # Define hyperparameter tuning grid (optional but recommended)
 xgb_grid <- expand.grid(
   nrounds = 100,
@@ -321,6 +338,16 @@ xgb_grid <- expand.grid(
   colsample_bytree = 1,
   min_child_weight = 1,
   subsample = 1
+)
+
+# Setting train control
+control <- trainControl(
+  method = "cv",         # k-fold CV
+  number = 10,           # 10-fold
+  summaryFunction = multiClassSummary,  # for multiclass metrics
+  classProbs = TRUE,
+  savePredictions = "final",
+  verboseIter = FALSE
 )
 
 # Train the XGBoost model using caret
@@ -413,11 +440,29 @@ Support Vector Machine (SVM) is a supervised learning algorithm that can be used
 
 ```{r svm}
 
+# Ensure response is a factor
+trainDat[, response] <- as.factor(trainDat[, response])
+
+# Define hyperparameter tuning grid (optional but recommended)
+svm_grid <- expand.grid(
+  sigma = 0.1,          # Kernel parameter
+  C = 1                 # Cost parameter
+)
+
+# Setting train control
+control <- trainControl(
+  method = "cv",         # k-fold CV
+  number = 10,           # 10-fold
+  summaryFunction = multiClassSummary,  # for multiclass metrics
+  classProbs = TRUE,
+  savePredictions = "final"
+)
+
 # Train Support Vector Machine (SVM) model
 set.seed(100)
 model_svm <- train(trainDat[, predictors], trainDat[, response], 
                    method = "svmRadial", 
-                   trControl = trainControl(method = "cv", number = 10), 
+                   trControl = control, 
                    importance = TRUE)
 
 ```
@@ -552,28 +597,69 @@ kable(scoring_df, caption = "Scoring Metrics for Each Model") %>%
   kable_styling(full_width = F, position = "left")
 
 # Plot the scoring metrics for each model
-ggplot(scoring_df, aes(x = Model)) +
-  geom_bar(aes(y = Accuracy, fill = "Accuracy"), stat = "identity", position = "dodge") +
-  geom_bar(aes(y = Precision, fill = "Precision"), stat = "identity", position = "dodge") +
-  geom_bar(aes(y = Sensitivity, fill = "Sensitivity"), stat = "identity", position = "dodge") +
-  geom_bar(aes(y = Specificity, fill = "Specificity"), stat = "identity", position = "dodge") +
-  geom_bar(aes(y = F1_Score, fill = "F1 Score"), stat = "identity", position = "dodge") +
-  labs(title = "Comparison of Scoring Metrics for Each Model",
-       x = "Model",
-       y = "Score") +
-  scale_fill_manual(values = c("Accuracy" = "#1f77b4", 
-                                "Precision" = "#ff7f0e", 
-                                "Sensitivity" = "#2ca02c", 
-                                "Specificity" = "#d62728", 
-                                "F1 Score" = "#9467bd")) +
+scoring_df_long <- melt(scoring_df, id.vars = "Model")
+ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Scoring Metrics Comparison between the models",
+       x = "Model", y = "Score") +
+  scale_fill_brewer(palette = "Set1") +
   theme_minimal() +
-  theme(legend.title=element_blank())
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 ```
 
 **Discussions - Model Performance**
 The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
 
+### Uncertainly Analysis
+**1. DALEX package**
+To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
+
+```{r uncertainty_analysis, echo=FALSE, message=FALSE}
+
+# Create explainers for each model using DALEX
+explainer_rf <- DALEX::explain(model_rf, data = trainDat[, predictors], y = trainDat[, response], label = "Random Forest")
+explainer_xgb <- DALEX::explain(model_xgb, data = trainDat[, predictors], y = trainDat[, response], label = "XGBoost")
+explainer_svm <- DALEX::explain(model_svm, data = trainDat[, predictors], y = trainDat[, response], label = "Support Vector Machine")
+
+# Create a list of explainers
+explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
+
+# Plot variable importance for each model
+plot_variable_importance <- function(explainer) {
+  variable_importance <- variable_importance(explainer)
+  ggplot(variable_importance, aes(x = reorder(variable, importance), y = importance)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(title = paste("Variable Importance -", explainer$label),
+         x = "Variable", y = "Importance Score") +
+    theme_minimal()
+}
+
+# Create plots for variable importance for each model
+plots <- lapply(explainers, plot_variable_importance)
+
+# Plot variable importance for each model
+grid.arrange(grobs = plots, ncol = 1)
+
+# Plot model predictions
+plot_model_predictions <- function(explainer) {
+  model_predictions <- model_performance(explainer)
+  ggplot(model_predictions, aes(x = observed, y = predicted)) +
+    geom_point() +
+    geom_abline(slope = 1, intercept = 0, color = "red") +
+    labs(title = paste("Model Predictions -", explainer$label),
+         x = "Observed", y = "Predicted") +
+    theme_minimal()
+}
+
+plots_predictions <- lapply(explainers, plot_model_predictions)
+
+# Plot model predictions for each model
+grid.arrange(grobs = plots_predictions, ncol = 1)
+
+```
 
 ### Predicted Maps by the Model
 To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
