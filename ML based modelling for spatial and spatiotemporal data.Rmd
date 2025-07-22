@@ -132,10 +132,18 @@ head(extr)
 # Set seed for reproducibility
 set.seed(100)
 
-# Create training and test datasets
+# Create training and test dataset
 trainids <- createDataPartition(extr$Class, list=FALSE, p=0.3)
 trainDat <- extr[trainids,]
 testDat <- extr[-trainids,]
+
+# Check the distribution of classes in training and test datasets
+table(trainDat$Class)
+table(testDat$Class)
+
+# Ensure Class is a factor and is at the same level
+trainDat$Class <- factor(trainDat$Class)
+
 
 ```
 
@@ -257,11 +265,18 @@ To evaluate the performance of the Random Forest model on the test dataset, we c
 
 ```{r rf_confusion_matrix}
 
-# Predict on test dataset
-y_pred_rf <- predict(model_rf, newdata = testDat[, predictors])
+# Predict on the test dataset
+predictions_rf <- predict(model_rf, newdata = testDat[, predictors])
 
-# Create confusion matrix
-confusion_rf <- confusionMatrix(y_pred_rf, testDat[, response])
+# Extract the levels from the training data response
+true_levels <- levels(trainDat[[response]])
+
+# Convert both predicted and actual responses to factors with the same levels
+predictions_rf <- factor(predictions_rf, levels = true_levels)
+actual_rf <- factor(testDat[[response]], levels = true_levels)
+
+# Now create the confusion matrix
+confusion_rf <- confusionMatrix(predictions_rf, actual_rf)
 
 # Print confusion matrix
 kable(confusion_rf$table, caption = "Confusion Matrix for Random Forest Model") %>%
