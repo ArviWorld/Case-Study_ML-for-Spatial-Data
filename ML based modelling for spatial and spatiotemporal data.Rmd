@@ -283,7 +283,7 @@ ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 The Random Forest model has been trained successfully, and we can see the variable importance scores for each predictor variable. The variable importance plot shows which features contribute most to the classification task, with the  being among the most important predictors.
 
-**Confusion matrix and Scoring metrics on the test data** 
+**Predicting the test data and using confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r rf_confusion_matrix}
@@ -299,16 +299,15 @@ predictions_rf <- factor(predictions_rf, levels = true_levels)
 actual_rf <- factor(testDat[[response]], levels = true_levels)
 
 # Construct the confusion matrix
-confusion_rf <- confusionMatrix(predictions_rf, actual_rf)
+confusion_rf <- caret::confusionMatrix(predictions_rf, actual_rf)
 
 # Plot confusion matrix
-cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), 
-                     aes(x = Reference, y = Prediction)) +
+cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
   labs(title = "Confusion Matrix for Random Forest Model",
-       x = "Actual Class",
+       x = "Reference Class",
        y = "Predicted Class") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -412,7 +411,7 @@ predictions_xgb <- factor(predictions_xgb, levels = true_levels_xgb)
 actual_xgb <- factor(testDat[[response]], levels = true_levels_xgb)
 
 # Now create the confusion matrix
-confusion_xgb <- confusionMatrix(predictions_xgb, actual_xgb)
+confusion_xgb <- caret::confusionMatrix(predictions_xgb, actual_xgb)
 
 # Plot confusion matrix
 cm_plot_xgb <- ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y = Prediction)) +
