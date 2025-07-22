@@ -250,8 +250,47 @@ ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 ```
 
-## XGBoost {#xgboost}
+The Random Forest model has been trained successfully, and we can see the variable importance scores for each predictor variable. The variable importance plot shows which features contribute most to the classification task, with the  being among the most important predictors.
 
+**Confusion matrix and Scoring metrics on the test data** 
+To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
+
+```{r rf_confusion_matrix}
+
+# Predict on test dataset
+y_pred_rf <- predict(model_rf, newdata = testDat[, predictors])
+
+# Create confusion matrix
+confusion_rf <- confusionMatrix(y_pred_rf, testDat[, response])
+
+# Print confusion matrix
+kable(confusion_rf$table, caption = "Confusion Matrix for Random Forest Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print scoring metrics
+kable(confusion_rf$overall, caption = "Scoring Metrics for Random Forest Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print sensitivity and specificity for each class
+kable(confusion_rf$byClass, caption = "Sensitivity and Specificity for Random Forest Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Plot confusion matrix
+ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = Freq), color = "black") +
+  labs(title = "Confusion Matrix for Random Forest Model",
+       x = "Reference Class",
+       y = "Predicted Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+## XGBoost {#xgboost}
 XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large datasets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ``` {r xgboost}
