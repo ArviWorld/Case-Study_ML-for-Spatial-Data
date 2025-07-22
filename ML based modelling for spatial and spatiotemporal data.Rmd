@@ -240,10 +240,6 @@ importance_df <- importance_df %>%
   mutate(Overall = round(Overall, 3)) %>%
   arrange(desc(Overall))  # High to low
 
-# Check the summary of the importance data frame
-kable(importance_df, caption = "Variable Importance Summary") %>%
-  kable_styling(full_width = F, position = "left")
-
 # View top variables
 kable(importance_df, caption = "Variable Importance for Random Forest Model") %>%
   kable_styling(full_width = F, position = "left")
@@ -275,20 +271,8 @@ true_levels <- levels(trainDat[[response]])
 predictions_rf <- factor(predictions_rf, levels = true_levels)
 actual_rf <- factor(testDat[[response]], levels = true_levels)
 
-# Now create the confusion matrix
+# Construct the confusion matrix
 confusion_rf <- confusionMatrix(predictions_rf, actual_rf)
-
-# Print confusion matrix
-kable(confusion_rf$table, caption = "Confusion Matrix for Random Forest Model") %>%
-  kable_styling(full_width = F, position = "left")
-
-# Print scoring metrics
-kable(confusion_rf$overall, caption = "Scoring Metrics for Random Forest Model") %>%
-  kable_styling(full_width = F, position = "left")
-
-# Print sensitivity and specificity for each class
-kable(confusion_rf$byClass, caption = "Sensitivity and Specificity for Random Forest Model") %>%
-  kable_styling(full_width = F, position = "left")
 
 # Plot confusion matrix
 ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
@@ -300,6 +284,14 @@ ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
        y = "Predicted Class") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print scoring metrics
+kable(confusion_rf$overall, caption = "Scoring Metrics for Random Forest Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print sensitivity and specificity for each class
+kable(confusion_rf$byClass, caption = "Sensitivity and Specificity for Random Forest Model") %>%
+  kable_styling(full_width = F, position = "left")
 
 ```
 
@@ -339,11 +331,6 @@ model_xgb <- train(x = trainDat[, predictors],
 # Basic model validation
 if (is.null(model_xgb$finalModel)) stop("XGBoost model training failed.")
 if (is.null(model_xgb$results)) stop("No results returned.")
-
-# View best hyperparameters
-kable( model_xgb$bestTune, caption = "Best Hyperparameters for XGBoost Model") %>%
-  kable_styling(full_width = F, position = "left")
-  
   
 ```
 
@@ -367,12 +354,11 @@ kable(importance_df_xgb, caption = "Variable Importance for XGBoost Model") %>%
   kable_styling(full_width = F, position = "left")
 
 # Visualize variable importance using ggplot2
-ggplot(model_xgb$results, aes(x = reorder(Variable, Importance), y = Importance)) +
-  geom_bar(stat = "identity") +
+ggplot(importance_df_xgb, aes(x = Variable, y = Gain)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
   coord_flip() +
-  labs(title = "Variable Importance for XGBoost Model",
-       x = "Variables",
-       y = "Importance") +
+  labs(title = "Variable Importance (High to Low)",
+       x = "Variable", y = "Importance Score") +
   theme_minimal()
 
 ```
@@ -394,10 +380,6 @@ actual_xgb <- factor(testDat[[response]], levels = true_levels_xgb)
 
 # Now create the confusion matrix
 confusion_xgb <- confusionMatrix(predictions_xgb, actual_xgb)
-
-# Print confusion matrix
-kable(confusion_xgb$table, caption = "Confusion Matrix for XGBoost Model") %>%
-  kable_styling(full_width = F, position = "left")
 
 # Plot confusion matrix
 ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y = Prediction)) +
@@ -434,9 +416,6 @@ model_svm <- train(trainDat[, predictors], trainDat[, response],
                    method = "svmRadial", 
                    trControl = trainControl(method = "cv", number = 10), 
                    importance = TRUE)
-
-# Print model summary
-print(model_svm)
 
 ```
 ```{r svm_summary, echo=FALSE, message=FALSE}
@@ -502,10 +481,6 @@ ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# Print confusion matrix
-kable(confusion_svm$table, caption = "Confusion Matrix for Support Vector Machine Model") %>%
-  kable_styling(full_width = F, position = "left")
-
 # Print scoring metrics
 kable(confusion_svm$overall, caption = "Scoring Metrics for Support Vector Machine Model") %>%
   kable_styling(full_width = F, position = "left")
@@ -522,7 +497,18 @@ Confusion Matrix and scoring metrics provide insights into the performance of th
 
 ## Results & Discussions {#results & discussions}
 ### Confusion matrices
+Comparing the Confusion matrices of the three models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
 
+```{r confusion_matrices, echo=FALSE, message=FALSE}
+
+# Create a list of confusion matrices for each model
+confusion_matrices <- list(
+  Random_Forest = confusion_rf,
+  XGBoost = confusion_xgb,
+  SVM = confusion_svm
+)
+
+```
 
 ### Accuracy comparison plots, 
 
@@ -531,6 +517,3 @@ Confusion Matrix and scoring metrics provide insights into the performance of th
 ### Predicted Maps by the Model
 
 
-
-## 
-Performance comparison, strengths/weaknesses, uncertainty insights.
