@@ -505,18 +505,10 @@ Comparing the Confusion matrices of the three models, we can see how well each m
 ```{r confusion_matrices, echo=FALSE, message=FALSE}
 
 # Create a list of confusion matrices for each model
-confusion_matrices <- list(
-  Random_Forest = cm_plot_xrf,
-  XGBoost = cm_plot_xgb,
-  SVM = cm_plot_svm
-)
-
-# Plot the matrices side by side
-grid.arrange(grobs = confusion_matrices, ncol = 3)
-
-# Easy side-by-side layout
-p1 + p2 + p3 
-             
+cm_plot_rf
+cm_plot_xgb
+cm_plot_svm
+ 
 ```
 
 ### Comparison and plots of Scoring metrics 
@@ -524,9 +516,38 @@ Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, 
 
 ```{r scoring_metrics, echo=FALSE, message=FALSE}
 
-# Create a data frame to hold the scoring metrics for each model
+# Create a data frame to hold the scoring metrics for each model from the test dataset
+scoring_df <- data.frame(
+  Model = c("Random Forest", "XGBoost", "Support Vector Machine"),
+  Accuracy = c(
+    confusion_rf$overall['Accuracy'],
+    confusion_xgb$overall['Accuracy'], 
+    confusion_svm$overall['Accuracy']),
+  Kappa = c(
+    confusion_rf$overall['Kappa'], 
+    confusion_xgb$overall['Kappa'], 
+    confusion_svm$overall['Kappa']),
+  Precision = c(
+    mean(confusion_rf$byClass[,"Precision"]), 
+    mean(confusion_xgb$byClass[,"Precision"]),
+    mean(confusion_svm$byClass[,"Precision"])),
+  Sensitivity = c(
+    mean(confusion_rf$byClass[,"Sensitivity"]),
+    mean(confusion_xgb$byClass[,"Sensitivity"]),
+    mean(confusion_svm$byClass[,"Sensitivity"])),
+  Specificity = c(
+    mean(confusion_rf$byClass[,"Specificity"]),
+    mean(confusion_xgb$byClass[,"Specificity"]),
+    mean(confusion_svm$byClass[,"Specificity"])),,
+  F1_Score = c(
+    mean(confusion_rf$byClass[,"F1"]), 
+    mean(confusion_xgb$byClass[,"F1"]), 
+    mean(confusion_svm$byClass[,"F1"]))
+)
+# Print the scoring metrics data frame
+kable(scoring_df, caption = "Scoring Metrics for Each Model") %>%
+  kable_styling(full_width = F, position = "left")
 
-scoring_df <- 
 
 ```
 
