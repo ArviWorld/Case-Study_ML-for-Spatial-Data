@@ -1,8 +1,8 @@
 ---
-title:  "Land cover classification with ML in R"
-subtitle: "Example of the Banks Peninsula in New Zealand"
+title:  "Land cover classification with ML models in R"
+subtitle: "Targeting the invasive species 'Gorse (Ulex europaeus)' on the Banks Peninsula in New Zealand"
 author: "Dr. Hanna Meyer"
-worked_by: "Aravindh Venkatraman"
+adapted_by: "Aravindh Venkatraman"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document: 
@@ -64,6 +64,7 @@ library(sf)
 library(randomForest)
 library(xgboost)
 library(e1071)
+library(ModelMetrics)
 library(ggplot2)
 library(patchwork)
 library(reshape2)
@@ -112,10 +113,10 @@ viewRGB(sentinel, r = 3, g = 2, b = 1, map.types = "Esri.WorldImagery") +
 ```
 
 ### Data Pre-processing {#data-pre-processing}
-
 We need to prepare the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the shapefile. This step is crucial for training the machine learning model. Then, we split the data into training and test datasets to ensure that we can evaluate the model's performance on unseen data.
 
-**Extract raster information** In order to train the Machine Learning model between the spectral properties and the land cover class, we first need to create a data frame that contains the spectral properties of the training sites as well as the corresponding class information. This data frame can be produced with the `extract` function. The resulting data frame contains the Sentinel data for each pixel overlayed by the polygons. This data frame then still needs to be merged with the information on the land cover class from the shapefile. This happens via the ID of the polygons which are given in the extracted data frame by the column "ID" and in the shapefile by the attribute "id".
+**Extract raster information** 
+In order to train the Machine Learning model between the spectral properties and the land cover class, we first need to create a data frame that contains the spectral properties of the training sites as well as the corresponding class information. This data frame can be produced with the `extract` function. The resulting data frame contains the Sentinel data for each pixel overlayed by the polygons. This data frame then still needs to be merged with the information on the land cover class from the shapefile. This happens via the ID of the polygons which are given in the extracted data frame by the column "ID" and in the shapefile by the attribute "id".
 
 ```{r extract}
 
@@ -124,11 +125,12 @@ extr <- extract(sentinel, training, df=TRUE)
 
 # Merge extracted data with training sites
 extr <- merge(extr, training, by.x="ID", by.y="id")
-head(extr)
-
+kable(extr, caption = "Merged Data") %>%
+  kable_styling(full_width = F, position = "left")
 ```
 
-**Split data** In order to keep data for a later (nearly) independent validation as well as to limit the number of data points so that the model training won't take long time, we split the total data set into 30% training data and 70% test data. Caret's `createDataPartition` takes care that the class distribution is the same in both datasets. We put the test data to the side and first only continue with the training data.
+**Spliting data into training and test data** 
+In order to keep data for a later (nearly) independent validation as well as to limit the number of data points so that the model training won't take long time, we split the total data set into 30% training data and 70% test data. Caret's `createDataPartition` takes care that the class distribution is the same in both datasets. We put the test data to the side and first only continue with the training data.
 
 ```{r split}
 
@@ -136,17 +138,22 @@ head(extr)
 set.seed(100)
 
 # Create training and test dataset
-trainids <- createDataPartition(extr$Class, list=FALSE, p=0.7)
+trainids <- createDataPartition(extr$Class, list=FALSE, p=0.3)
 trainDat <- extr[trainids,]
 testDat <- extr[-trainids,]
 
 # Check the distribution of classes in training and test datasets
-table(trainDat$Class)
-table(testDat$Class)
+training_class = round(prop.table(table(trainDat$Class)) * 100, 2)
+test_class = round(prop.table(table(testDat$Class)) * 100, 2)
+
+kable(training_class, caption = "Training class balance") %>%
+  kable_styling(full_width = F, position = "left")
+kable(test_class, caption = "Test class balance") %>%
+  kable_styling(full_width = F, position = "left")
 
 # Ensure Class is a factor and is at the same level
 trainDat$Class <- factor(trainDat$Class)
-
+testDat$Class <- factor(testDat$Class)
 
 ```
 
@@ -191,7 +198,6 @@ ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
 The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. The other feat Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
 
 # Machine Learning Model {#machine-learning-model}
-
 The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
 
 **Selecting predictor and response variable** Before building the ML models, we need to select the predictor variables (the Sentinel bands and indices) and the response variable (the land cover class). The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
@@ -203,10 +209,6 @@ predictors <- c("B02", "B03", "B04", "B05", "B06", "B07", "B08", "NDVI", "yellow
 
 # Select response variable (land cover class)
 response <- 'Class'
-
-# Check for class imbalance
-table(trainDat$Class)
-prop.table(trainDat$Class)
 
 ```
 
@@ -245,7 +247,7 @@ model_rf <- train(trainDat[, predictors], trainDat[, response],
 
 ```
 
-```{r rf_summary, echo=FALSE, message=FALSE}
+```{r rf_summary, echo=TRUE, message=FALSE}
 
 # Print model summary
 kable(model_rf$results, caption = "Random Forest Model Results") %>%
@@ -300,15 +302,18 @@ actual_rf <- factor(testDat[[response]], levels = true_levels)
 confusion_rf <- confusionMatrix(predictions_rf, actual_rf)
 
 # Plot confusion matrix
-cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
+cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), 
+                     aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
   labs(title = "Confusion Matrix for Random Forest Model",
-       x = "Reference Class",
+       x = "Actual Class",
        y = "Predicted Class") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+cm_plot_rf
 
 # Print scoring metrics
 kable(confusion_rf$overall, caption = "Scoring Metrics for Random Forest Model") %>%
@@ -331,7 +336,7 @@ XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation o
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
 
-# Define hyperparameter tuning grid (optional but recommended)
+# Define hyperparameter tuning grid 
 xgb_grid <- expand.grid(
   nrounds = 100,
   max_depth = 6,
@@ -443,7 +448,7 @@ Support Vector Machine (SVM) is a supervised learning algorithm that can be used
 # Ensure response is a factor
 trainDat[, response] <- as.factor(trainDat[, response])
 
-# Define hyperparameter tuning grid (optional but recommended)
+# Define hyperparameter tuning grid 
 svm_grid <- expand.grid(
   sigma = 0.1,          # Kernel parameter
   C = 1                 # Cost parameter
@@ -455,7 +460,8 @@ control <- trainControl(
   number = 10,           # 10-fold
   summaryFunction = multiClassSummary,  # for multiclass metrics
   classProbs = TRUE,
-  savePredictions = "final"
+  savePredictions = "final",
+  sampling = "smote"
 )
 
 # Train Support Vector Machine (SVM) model
@@ -463,10 +469,12 @@ set.seed(100)
 model_svm <- train(trainDat[, predictors], trainDat[, response], 
                    method = "svmRadial", 
                    trControl = control, 
-                   importance = TRUE)
+                   tuneGrid = svm_grid,
+                   preProcess = c("center", "scale", "zv"))
 
 ```
-```{r svm_summary, echo=FALSE, message=FALSE}
+
+```{r svm_summary, echo=TRUE, message=FALSE}
 
 # Print model summary
 kable(model_svm$results, caption = "Support Vector Machine Model Results") %>%
@@ -544,7 +552,6 @@ kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support 
 
 **Results** 
 Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
-
 
 ## Results & Discussions {#results & discussions}
 ### Confusion matrices
@@ -626,40 +633,21 @@ explainer_xgb <- DALEX::explain(model_xgb, data = trainDat[, predictors], y = tr
 explainer_svm <- DALEX::explain(model_svm, data = trainDat[, predictors], y = trainDat[, response], label = "Support Vector Machine")
 
 # Create a list of explainers
-explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
+explainer <- list(explainer_rf, explainer_xgb, explainer_svm)
 
-# Plot variable importance for each model
-plot_variable_importance <- function(explainer) {
-  variable_importance <- variable_importance(explainer)
-  ggplot(variable_importance, aes(x = reorder(variable, importance), y = importance)) +
-    geom_bar(stat = "identity", fill = "steelblue") +
-    coord_flip() +
-    labs(title = paste("Variable Importance -", explainer$label),
-         x = "Variable", y = "Importance Score") +
-    theme_minimal()
+# Plot model residuals
+plot_model_residuals <- function(explainer) {
+  perf <- DALEX::model_performance(explainer)
+  plot(perf) + ggtitle(paste("Residual Plot -", explainer$label))
 }
 
-# Create plots for variable importance for each model
-plots <- lapply(explainers, plot_variable_importance)
+# Generate residual plots 
+residual_plots <- lapply(explainers, plot_model_residuals)
 
-# Plot variable importance for each model
-ggplot(plots)
+# Residual plots
+for (p in residual_plots) print(p)
 
-# Plot model predictions
-plot_model_predictions <- function(explainer) {
-  model_predictions <- model_performance(explainer)
-  ggplot(model_predictions, aes(x = observed, y = predicted)) +
-    geom_point() +
-    geom_abline(slope = 1, intercept = 0, color = "red") +
-    labs(title = paste("Model Predictions -", explainer$label),
-         x = "Observed", y = "Predicted") +
-    theme_minimal()
-}
 
-plots_predictions <- lapply(explainers, plot_model_predictions)
-
-# Plot model predictions for each model
-plots_predictions
 
 ```
 
@@ -668,12 +656,13 @@ To visualize the spatial predictions made by each model, we can create maps that
 
 ```{r spatial_predictions, echo=FALSE, message=FALSE}
 
+# Construct the sentinel image (normal map)
+viewRGB(sentinel, r = 3, g = 2, b = 1, map.types = "Esri.WorldImagery")
+
 # Create a function to plot spatial predictions for each model
 plot_spatial_predictions <- function(predictions, title) {
-  
   # Convert predictions to a raster
   pred_raster <- raster(predictions)
-  
   # Plot the raster with a color palette
   plot(pred_raster, main = title, col = terrain.colors(10), axes = FALSE, box = FALSE)
 }
