@@ -303,7 +303,8 @@ ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
 
 ```
 
-
+**Results** 
+Confusion Matrix and scoring metrics provide insights into the performance of the Random Forest model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
 
 ## XGBoost {#xgboost}
 XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large datasets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
@@ -340,8 +341,10 @@ if (is.null(model_xgb$finalModel)) stop("XGBoost model training failed.")
 if (is.null(model_xgb$results)) stop("No results returned.")
 
 # View best hyperparameters
-print(model_xgb$bestTune)
-
+kable( model_xgb$bestTune, caption = "Best Hyperparameters for XGBoost Model") %>%
+  kable_styling(full_width = F, position = "left")
+  
+  
 ```
 
 ``` {r xgb_summary, echo=TRUE, message=FALSE}
@@ -374,8 +377,53 @@ ggplot(model_xgb$results, aes(x = reorder(Variable, Importance), y = Importance)
 
 ```
 
-## Support Vector Machine (SVM) {#support-vector-machine-svm}
+**Confusion matrix and Scoring metrics on the test data** 
+To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
+```{r xgb_confusion_matrix}
+
+# Predict on the test dataset
+predictions_xgb <- predict(model_xgb, newdata = testDat[, predictors])
+
+# Extract the levels from the training data response
+true_levels_xgb <- levels(trainDat[[response]])
+
+# Convert both predicted and actual responses to factors with the same levels
+predictions_xgb <- factor(predictions_xgb, levels = true_levels_xgb)
+actual_xgb <- factor(testDat[[response]], levels = true_levels_xgb)
+
+# Now create the confusion matrix
+confusion_xgb <- confusionMatrix(predictions_xgb, actual_xgb)
+
+# Print confusion matrix
+kable(confusion_xgb$table, caption = "Confusion Matrix for XGBoost Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Plot confusion matrix
+ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y = Prediction)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = Freq), color = "black") +
+  labs(title = "Confusion Matrix for XGBoost Model",
+       x = "Reference Class",
+       y = "Predicted Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print scoring metrics
+kable(confusion_xgb$overall, caption = "Scoring Metrics for XGBoost Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print sensitivity and specificity for each class
+kable(confusion_xgb$byClass, caption = "Sensitivity and Specificity for XGBoost Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+```
+
+**Results** 
+Confusion Matrix and scoring metrics provide insights into the performance of the XGBoost model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+
+## Support Vector Machine (SVM) {#support-vector-machine-svm}
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r svm}
@@ -391,17 +439,98 @@ model_svm <- train(trainDat[, predictors], trainDat[, response],
 print(model_svm)
 
 ```
+```{r svm_summary, echo=FALSE, message=FALSE}
 
-**Results** The trained models are now ready for evaluation. We will compare the performance of the Random Forest, XGBoost, and SVM models using confusion matrices, accuracy comparison plots, and spatial predictions.
+# Print model summary
+kable(model_svm$results, caption = "Support Vector Machine Model Results") %>%
+  kable_styling(full_width = F, position = "left")
 
-## Methods
+# Extract variable importance
+importance_svm <- varImp(model_svm)$importance
 
-ML algorithms, spatial prediction.
+# Add variable names as a column
+importance_svm$Variable <- rownames(importance_svm)
 
-## Results {#results}
+# Compute overall importance (if multiple classes)
+importance_svm$Overall <- rowMeans(importance_svm[, sapply(importance_svm, is.numeric)])
 
-Confusion matrices, accuracy comparison plots, maps.
+# Round and sort in descending order
+importance_svm <- importance_svm %>%
+  mutate(Overall = round(Overall, 3)) %>%
+  arrange(desc(Overall))  # High to low
 
-## Discussion {#discussion}
+# View top variables
+kable(importance_svm, caption = "Variable Importance for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
 
+# Plot variable importance
+ggplot(importance_svm, aes(x = reorder(Variable, Overall), y = Overall)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Variable Importance (High to Low)",
+       x = "Variable", y = "Importance Score") +
+  theme_minimal()
+
+```
+
+**Confusion matrix and Scoring metrics on the test data** 
+To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
+
+```{r svm_confusion_matrix}
+
+# Predict on the test dataset
+predictions_svm <- predict(model_svm, newdata = testDat[, predictors])
+
+# Extract the levels from the training data response
+true_levels_svm <- levels(trainDat[[response]])
+
+# Convert both predicted and actual responses to factors with the same levels
+predictions_svm <- factor(predictions_svm, levels = true_levels_svm)
+actual_svm <- factor(testDat[[response]], levels = true_levels_svm)
+
+# Construct the confusion matrix
+confusion_svm <- confusionMatrix(predictions_svm, actual_svm)
+
+# Plot confusion matrix
+ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = Freq), color = "black") +
+  labs(title = "Confusion Matrix for Support Vector Machine Model",
+       x = "Reference Class",
+       y = "Predicted Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print confusion matrix
+kable(confusion_svm$table, caption = "Confusion Matrix for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print scoring metrics
+kable(confusion_svm$overall, caption = "Scoring Metrics for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print sensitivity and specificity for each class
+kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+```
+
+**Results** 
+Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+
+
+## Results & Discussions {#results & discussions}
+### Confusion matrices
+
+
+### Accuracy comparison plots, 
+
+
+
+### Predicted Maps by the Model
+
+
+
+## 
 Performance comparison, strengths/weaknesses, uncertainty insights.
