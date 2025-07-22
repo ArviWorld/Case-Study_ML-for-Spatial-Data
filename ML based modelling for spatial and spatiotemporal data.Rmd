@@ -486,7 +486,7 @@ importance_svm <- importance_svm %>%
   mutate(Overall = round(Overall, 3)) %>%
   arrange(desc(Overall))  # High to low
 
-# View top variables
+# Print top variables
 kable(importance_svm, caption = "Variable Importance for Support Vector Machine Model") %>%
   kable_styling(full_width = F, position = "left")
 
