@@ -65,6 +65,9 @@ library(randomForest)
 library(xgboost)
 library(e1071)
 library(ggplot2)
+library(patchwork)
+library(reshape2)
+library(gridExtra)
 library(dplyr)
 library(rpart)
 library(ranger)
@@ -275,7 +278,7 @@ actual_rf <- factor(testDat[[response]], levels = true_levels)
 confusion_rf <- confusionMatrix(predictions_rf, actual_rf)
 
 # Plot confusion matrix
-ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
+cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
@@ -382,7 +385,7 @@ actual_xgb <- factor(testDat[[response]], levels = true_levels_xgb)
 confusion_xgb <- confusionMatrix(predictions_xgb, actual_xgb)
 
 # Plot confusion matrix
-ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y = Prediction)) +
+cm_plot_xgb <- ggplot(as.data.frame(confusion_xgb$table), aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
@@ -471,7 +474,7 @@ actual_svm <- factor(testDat[[response]], levels = true_levels_svm)
 confusion_svm <- confusionMatrix(predictions_svm, actual_svm)
 
 # Plot confusion matrix
-ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
+cm_plot_svm <- ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
@@ -503,14 +506,20 @@ Comparing the Confusion matrices of the three models, we can see how well each m
 
 # Create a list of confusion matrices for each model
 confusion_matrices <- list(
-  Random_Forest = confusion_rf,
-  XGBoost = confusion_xgb,
-  SVM = confusion_svm
+  Random_Forest = cm_plot_xrf,
+  XGBoost = cm_plot_xgb,
+  SVM = cm_plot_svm
 )
 
+# Plot the matrices side by side
+grid.arrange(grobs = confusion_matrices, ncol = 3)
+
+# Easy side-by-side layout
+p1 + p2 + p3 
+             
 ```
 
-### Accuracy comparison plots, 
+### Accuracy comparison plots
 
 
 
