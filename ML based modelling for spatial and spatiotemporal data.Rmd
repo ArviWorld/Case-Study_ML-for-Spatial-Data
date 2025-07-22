@@ -511,6 +511,9 @@ cm_plot_svm
  
 ```
 
+**Discussion**
+
+
 ### Comparison and plots of Scoring metrics 
 Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, specificity) of the three models to see which model performed best overall. The accuracy metric indicates the overall correctness of the model, while sensitivity and specificity provide insights into how well the model identifies each class.
 
@@ -538,7 +541,7 @@ scoring_df <- data.frame(
   Specificity = c(
     mean(confusion_rf$byClass[,"Specificity"]),
     mean(confusion_xgb$byClass[,"Specificity"]),
-    mean(confusion_svm$byClass[,"Specificity"])),,
+    mean(confusion_svm$byClass[,"Specificity"])),
   F1_Score = c(
     mean(confusion_rf$byClass[,"F1"]), 
     mean(confusion_xgb$byClass[,"F1"]), 
@@ -548,12 +551,66 @@ scoring_df <- data.frame(
 kable(scoring_df, caption = "Scoring Metrics for Each Model") %>%
   kable_styling(full_width = F, position = "left")
 
+# Plot the scoring metrics for each model
+ggplot(scoring_df, aes(x = Model)) +
+  geom_bar(aes(y = Accuracy, fill = "Accuracy"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = Precision, fill = "Precision"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = Sensitivity, fill = "Sensitivity"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = Specificity, fill = "Specificity"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = F1_Score, fill = "F1 Score"), stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Scoring Metrics for Each Model",
+       x = "Model",
+       y = "Score") +
+  scale_fill_manual(values = c("Accuracy" = "#1f77b4", 
+                                "Precision" = "#ff7f0e", 
+                                "Sensitivity" = "#2ca02c", 
+                                "Specificity" = "#d62728", 
+                                "F1 Score" = "#9467bd")) +
+  theme_minimal() +
+  theme(legend.title=element_blank())
+
+```
+
+**Discussions - Model Performance**
+The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
+
+
+### Predicted Maps by the Model
+To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
+
+```{r spatial_predictions, echo=FALSE, message=FALSE}
+
+# Create a function to plot spatial predictions for each model
+plot_spatial_predictions <- function(predictions, title) {
+  # Convert predictions to a raster
+  pred_raster <- raster(predictions)
+  
+  # Plot the raster with a color palette
+  plot(pred_raster, main = title, col = terrain.colors(10), axes = FALSE, box = FALSE)
+}
+
+# Plot spatial predictions for each model
+plot_spatial_predictions(predictions_rf, "Random Forest Predictions")
+plot_spatial_predictions(predictions_xgb, "XGBoost Predictions")
+plot_spatial_predictions(predictions_svm, "Support Vector Machine Predictions")
 
 ```
 
 
 
 
-### Predicted Maps by the Model
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
