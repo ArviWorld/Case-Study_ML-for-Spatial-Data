@@ -66,6 +66,7 @@ library(xgboost)
 library(e1071)
 library(ModelMetrics)
 library(ggplot2)
+library(ingredients)
 library(patchwork)
 library(reshape2)
 library(gridExtra)
@@ -398,7 +399,7 @@ ggplot(importance_df_xgb, aes(x = Variable, y = Gain)) +
 
 ```
 
-**Predicting the test data and using confusion matrix and scoring metrics* 
+**Predicting the test data with confusion matrix and scoring metrics* 
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r xgb_confusion_matrix}
@@ -509,7 +510,7 @@ ggplot(importance_svm, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 ```
 
-**Predicting the test data and using confusion matrix and scoring metrics**
+**Predicting the test data with confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r svm_confusion_matrix}
@@ -647,14 +648,20 @@ explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
 # Plot model residuals
 plot_model_residuals <- function(explainer) {
   perf <- DALEX::model_performance(explainer)
-  plot(perf) + ggtitle(paste("Residual Plot -", explainer$label))
+  autoplot(perf) +
+    ggtitle(paste("Residual Plot -", explainer$label)) + 
+    theme_minimal()
 }
 
 # Generate residual plots 
 residual_plots <- lapply(explainers, plot_model_residuals)
 
 # Residual plots
-for (p in residual_plots) print(p)
+par(mfrow = c(1, 3))  # Layout for 3 plots
+
+residual_plots
+
+par(mfrow = c(1, 1))  # Reset to default
 
 ```
 
