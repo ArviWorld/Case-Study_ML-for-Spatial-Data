@@ -128,6 +128,7 @@ extr <- extract(sentinel, training, df=TRUE)
 extr <- merge(extr, training, by.x="ID", by.y="id")
 kable(extr, caption = "Merged Data") %>%
   kable_styling(full_width = F, position = "left")
+
 ```
 
 **Spliting data into training and test data** 
@@ -143,6 +144,10 @@ trainids <- createDataPartition(extr$Class, list=FALSE, p=0.3)
 trainDat <- extr[trainids,]
 testDat <- extr[-trainids,]
 
+# Ensure Class is a factor and is at the same level
+trainDat$Class <- factor(trainDat$Class)
+testDat$Class <- factor(testDat$Class)
+
 # Check the distribution of classes in training and test datasets
 training_class = round(prop.table(table(trainDat$Class)) * 100, 2)
 test_class = round(prop.table(table(testDat$Class)) * 100, 2)
@@ -151,10 +156,6 @@ kable(training_class, caption = "Training class balance") %>%
   kable_styling(full_width = F, position = "left")
 kable(test_class, caption = "Test class balance") %>%
   kable_styling(full_width = F, position = "left")
-
-# Ensure Class is a factor and is at the same level
-trainDat$Class <- factor(trainDat$Class)
-testDat$Class <- factor(testDat$Class)
 
 ```
 
@@ -285,7 +286,7 @@ ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 The Random Forest model has been trained successfully, and we can see the variable importance scores for each predictor variable. The variable importance plot shows which features contribute most to the classification task, with the  being among the most important predictors.
 
-**Predicting the test data and using confusion matrix and scoring metrics**
+**Predicting the test data with confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
 ```{r rf_confusion_matrix, echo=TRUE, warning=FALSE}
