@@ -105,10 +105,11 @@ print(training)
 
 **Visualize the data:** We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
 
-```{r visMV, warning=FALSE, message= FALSE}
+```{r visMV, echo=TRUE, warning=FALSE, message= FALSE}
 
 # Visualize Sentinel data with training sites
-viewRGB(sentinel, r = 3, g = 2, b = 1, scale = 65535, stretch = "lin", main = "Sentinel RGB Image") + mapview(training)
+viewRGB(sentinel, r=3, g=2, b=1, map.types = "Esri.WorldImagery") + 
+  mapview(training)
 
 ```
 
