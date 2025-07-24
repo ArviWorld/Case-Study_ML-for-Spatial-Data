@@ -514,7 +514,8 @@ To evaluate the performance of the Random Forest model on the test dataset, we c
 ```{r svm_confusion_matrix}
 
 # Predict on the test dataset
-predictions_svm <- predict(model_svm, newdata = testDat[, predictors])
+predictions_svm <- predict(model_svm, newdata = testDat[, predictors],
+                           probability = TRUE)
 
 # Extract the levels from the training data response
 true_levels_svm <- levels(trainDat[[response]])
@@ -630,10 +631,13 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
 The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
 
 ### Uncertainly Analysis
-**1. DALEX package**
+**1. DALEX Uncertainity Analysis**
 To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
 
 ```{r uncertainty_analysis, echo=FALSE, message=FALSE}
+
+# Define a safe predict function
+predict_class <- function(m, d) predict(m, d, type = "raw")
 
 # Create explainers for each model using DALEX
 explainer_rf <- DALEX::explain(model_rf, 
@@ -644,7 +648,7 @@ explainer_xgb <- DALEX::explain(model_xgb,
                                 data = testDat[, predictors], 
                                 y = testDat$Class, 
                                 label = "XGBoost")
-explainer_svm <- DALEX::explain(model_svm, 
+explainer_svm <- DALEX::explain(model = model_svm, 
                                 data = testDat[, predictors], 
                                 y = testDat$Class, 
                                 label = "Support Vector Machine")
@@ -666,71 +670,6 @@ plot(mp_svm)
 
 ### Predicted Maps by the Model
 To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
-
-```{r stacking sentinel, echo=FALSE, message=FALSE}
-
-# Stacking Sentinel bands + indices
-predictors_stack <- stack(sentinel$B02, 
-                          sentinel$B03, 
-                          sentinel$B04, 
-                          sentinel$B05,
-                          sentinel$B06, 
-                          sentinel$B07, 
-                          sentinel$B08,
-                          sentinel$NDVI, 
-                          sentinel$yellowness)
-
-# Convert raster stack to dataframe (pixel wise)
-all_pixels_df <- as.data.frame(predictors_stack, na.rm = FALSE)
-
-# Predict for all raster cells for each model
-predictions_rf_all <- predict(model_rf, newdata = all_pixels_df)
-predictions_xbg_all <- predict(model_xgb, newdata = all_pixels_df)
-predictions_svm_all <- predict(model_svm, newdata = all_pixels_df)
-
-```
-
-``` {r predicted map vis}
-
-# Convert the raster to data frame with coordinates
-rf_df <- as.data.frame(predictions_rf_all, xy = TRUE, na.rm = TRUE)
-xgb_df <- as.data.frame(predictions_xgb_all, xy = TRUE, na.rm = TRUE)
-svm_df <- as.data.frame(predictions_svm_all, xy = TRUE, na.rm = TRUE)
-
-# Rename the prediction column for clarity (assuming 1 layer per raster)
-names(rf_df)[3] <- "class"
-names(xgb_df)[3] <- "class"
-names(svm_df)[3] <- "class"
-
-```
-
-```{r map plots}
-
-# Predict function wrapper
-predict_raster <- function(model, raster) {
-  raster_df <- as.data.frame(raster, na.rm=TRUE)
-  pred <- predict(model, raster_df)
-  out <- raster[[1]]
-  out[] <- NA
-  out[!is.na(raster[[1]])] <- as.numeric(pred)
-  return(out)
-}
-
-# Predict maps
-map_rf <- predict_raster(model_rf, sentinel)
-map_xgb <- predict_raster(model_xgb, sentinel)
-map_svm <- predict_raster(model_svm, sentinel)
-
-```
-
-
-
-
-
-
-
-
-
 
 
 
