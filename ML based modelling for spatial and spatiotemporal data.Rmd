@@ -218,7 +218,7 @@ ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
 The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. The other feat Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
 
 # Machine Learning Model {#machine-learning-model}
-The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest and XGBoost. Each model will be trained on the training dataset and evaluated on the test dataset.
+The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
 
 **Selecting predictor and response variable** 
 Before building the ML models, we need to select the predictor variables (the Sentinel bands and indices) and the response variable (the land cover class). The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
@@ -312,8 +312,6 @@ To evaluate the performance of the Random Forest model on the test dataset, we c
 
 # Predict on the test dataset
 predictions_rf <- predict(model_rf, newdata = testDat[, predictors])
-probs_rf <- predict(model_rf, newdata = testDat[, predictors],
-                   type = 'prob')
 
 # Extract the levels from the training data response
 true_levels <- levels(trainDat[[response]])
@@ -426,8 +424,6 @@ To evaluate the performance of the Random Forest model on the test dataset, we c
 
 # Predict on the test dataset
 predictions_xgb <- predict(model_xgb, newdata = testDat[, predictors])
-probs_xgb <- predict(model_rf, newdata = testDat[, predictors],
-                   type = 'prob')
 
 # Extract the levels from the training data response
 true_levels_xgb <- levels(trainDat[[response]])
@@ -465,6 +461,119 @@ kable(confusion_xgb$byClass, caption = "Sensitivity and Specificity for XGBoost 
 **Results** 
 Confusion Matrix and scoring metrics provide insights into the performance of the XGBoost model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
 
+## Support Vector Machine (SVM) {#support-vector-machine-svm}
+Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+
+```{r svm, echo=TRUE, warning=FALSE}
+
+# Ensure response is a factor
+trainDat[, response] <- as.factor(trainDat[, response])
+
+# Define hyperparameter tuning grid 
+svm_grid <- expand.grid(
+  sigma = 0.1,          # Kernel parameter
+  C = 1                 # Cost parameter
+)
+
+# Setting train control
+control <- trainControl(
+  method = "cv",         # k-fold CV
+  number = 10,           # 10-fold
+  summaryFunction = multiClassSummary,  # for multiclass metrics
+  classProbs = TRUE,
+  savePredictions = "final"
+)
+
+# Train Support Vector Machine (SVM) model
+set.seed(100)
+model_svm <- train(trainDat[, predictors], trainDat[, response], 
+                   method = "svmRadial", 
+                   trControl = trainControl(method = "cv", number = 10), 
+                   tuneGrid = svm_grid)
+
+
+```
+
+```{r svm_summary, echo=TRUE, message=FALSE}
+
+# Print model summary
+kable(model_svm$results, caption = "Support Vector Machine Model Results") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Extract variable importance
+importance_svm <- varImp(model_svm)$importance
+
+# Add variable names as a column
+importance_svm$Variable <- rownames(importance_svm)
+
+# Compute overall importance (if multiple classes)
+importance_svm$Overall <- rowMeans(importance_svm[, sapply(importance_svm, is.numeric)])
+
+# Round and sort in descending order
+importance_svm <- importance_svm %>%
+  mutate(Overall = round(Overall, 3)) %>%
+  arrange(desc(Overall))  # High to low
+
+# Print top variables
+kable(importance_svm, caption = "Variable Importance for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Plot variable importance
+ggplot(importance_svm, aes(x = reorder(Variable, Overall), y = Overall)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Variable Importance (High to Low)",
+       x = "Variable", y = "Importance Score") +
+  theme_minimal()
+
+```
+
+**Predicting the test data with confusion matrix and scoring metrics**
+To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
+
+```{r svm_confusion_matrix}
+
+# Predict on the test dataset
+predictions_svm <- predict(model_svm, newdata = testDat[, predictors],
+                           probability = TRUE)
+
+# Extract the levels from the training data response
+true_levels_svm <- levels(trainDat[[response]])
+
+# Convert both predicted and actual responses to factors with the same levels
+predictions_svm <- factor(predictions_svm, levels = true_levels_svm)
+actual_svm <- factor(testDat[[response]], levels = true_levels_svm)
+
+# Construct the confusion matrix
+confusion_svm <- caret::confusionMatrix(predictions_svm, actual_svm)
+
+# Plot confusion matrix
+cm_plot_svm <- ggplot(as.data.frame(confusion_svm$table), aes(x = Reference, y = Prediction)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  geom_text(aes(label = Freq), color = "black") +
+  labs(title = "Confusion Matrix for Support Vector Machine Model",
+       x = "Reference Class",
+       y = "Predicted Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot Confusion Matrix
+cm_plot_svm
+
+# Print scoring metrics
+kable(confusion_svm$overall, caption = "Scoring Metrics for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+# Print sensitivity and specificity for each class
+kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support Vector Machine Model") %>%
+  kable_styling(full_width = F, position = "left")
+
+```
+
+**Results** 
+Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+
 ## Results & Discussions {#results & discussions}
 ### Confusion matrices
 Comparing the Confusion matrices of the three models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
@@ -474,6 +583,7 @@ Comparing the Confusion matrices of the three models, we can see how well each m
 # Create a list of confusion matrices for each model
 cm_plot_rf
 cm_plot_xgb
+cm_plot_svm
 
 ```
 
@@ -487,26 +597,32 @@ Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, 
 
 # Create a data frame to hold the scoring metrics for each model from the test dataset
 scoring_df <- data.frame(
-  Model = c("Random Forest", "XGBoost"),
+  Model = c("Random Forest", "XGBoost", "Support Vector Machine"),
   Accuracy = c(
     confusion_rf$overall['Accuracy'],
-    confusion_xgb$overall['Accuracy']),
+    confusion_xgb$overall['Accuracy'], 
+    confusion_svm$overall['Accuracy']),
   Kappa = c(
     confusion_rf$overall['Kappa'], 
-    confusion_xgb$overall['Kappa']),
+    confusion_xgb$overall['Kappa'], 
+    confusion_svm$overall['Kappa']),
   Precision = c(
     mean(confusion_rf$byClass[,"Precision"]), 
-    mean(confusion_xgb$byClass[,"Precision"])),
+    mean(confusion_xgb$byClass[,"Precision"]),
+    mean(confusion_svm$byClass[,"Precision"])),
   Sensitivity = c(
     mean(confusion_rf$byClass[,"Sensitivity"]),
-    mean(confusion_xgb$byClass[,"Sensitivity"])),
+    mean(confusion_xgb$byClass[,"Sensitivity"]),
+    mean(confusion_svm$byClass[,"Sensitivity"])),
   Specificity = c(
     mean(confusion_rf$byClass[,"Specificity"]),
-    mean(confusion_xgb$byClass[,"Specificity"])),
+    mean(confusion_xgb$byClass[,"Specificity"]),
+    mean(confusion_svm$byClass[,"Specificity"])),
   F1_Score = c(
     mean(confusion_rf$byClass[,"F1"]), 
-    mean(confusion_xgb$byClass[,"F1"]))
-  )
+    mean(confusion_xgb$byClass[,"F1"]), 
+    mean(confusion_svm$byClass[,"F1"]))
+)
 
 # Print the scoring metrics data frame
 kable(scoring_df, caption = "Scoring Metrics for Each Model") %>%
@@ -534,13 +650,14 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
 **Discussions - Model Performance**
 The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
 
-### Predicted Maps
-
 ### Uncertainly Analysis
 **1. DALEX Uncertainity Analysis**
 To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
 
 ```{r uncertainty_analysis, echo=FALSE, message=FALSE}
+
+# Define a safe predict function
+predict_class <- function(m, d) predict(m, d, type = "raw")
 
 # Create explainers for each model using DALEX
 explainer_rf <- DALEX::explain(model_rf, 
@@ -551,12 +668,18 @@ explainer_xgb <- DALEX::explain(model_xgb,
                                 data = testDat[, predictors], 
                                 y = testDat$Class, 
                                 label = "XGBoost")
+explainer_svm <- DALEX::explain(model = model_svm, 
+                                data = testDat[, predictors], 
+                                y = testDat$Class, 
+                                label = "Support Vector Machine")
 
 # Residual performance (classification)
 mp_rf <- model_performance(explainer_rf)
 mp_xgb <- model_performance(explainer_xgb)
+mp_svm <- model_performance(explainer_svm)
 
 # Plot ROC or accuracy
+<<<<<<< HEAD
 plot(mp_rf) 
 plot(mp_xgb)
 
@@ -580,44 +703,19 @@ scores_df <- scores_df[, c("model", setdiff(names(scores_df), "model"))]
 
 # View results
 print(scores_df)
+=======
+plot(mp_rf)
+plot(mp_xgb)
+plot(mp_svm)
+>>>>>>> parent of 648b287 (Update ML based modelling for spatial and spatiotemporal data.Rmd)
 
 ```
-**2. Probability-based Entropy Maps**
+8.1. Probability-based Entropy Maps (for uncertainty)
 
-```{r entropy analysis}
+8.2. Model Disagreement Map
 
-# Entropy function per row (Shannon Entropy)
-entropy_row <- function(probs) {
-  -sum(probs * log(probs + 1e-10))  # avoid log(0)
-}
-
-# Compute entropy
-entropy_rf <- apply(probs_rf, 1, entropy_row)
-entropy_xgb <- apply(probs_xgb, 1, entropy_row)
-
-```
-
-``` {r entropy maps}
-
-testDat$entropy_rf  <- entropy_rf
-testDat$entropy_xgb <- entropy_xgb
-
-# Plot Entropy Map (e.g., for SVM)
-ggplot(testDat, aes(x = lon, y = lat, fill = entropy_rf)) +
-  geom_raster() +
-  scale_fill_viridis_c() +
-  labs(title = "Entropy Map - RV", fill = "Entropy")
-
-ggplot(testDat, aes(x = lon, y = lat, fill = entropy_xgb)) +
-  geom_raster() +
-  scale_fill_viridis_c() +
-  labs(title = "Entropy Map - XGB", fill = "Entropy")
-
-```
-
-**3. Model Disagreement Map**
-
-
+### Predicted Maps by the Model
+To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
 
 
 
