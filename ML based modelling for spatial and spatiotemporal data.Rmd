@@ -537,7 +537,29 @@ mp_rf <- model_performance(explainer_rf)
 mp_xgb <- model_performance(explainer_xgb)
 
 # Plot ROC or accuracy
-plot(mp_rf) + plot(mp_xgb)
+plot(mp_rf) 
+plot(mp_xgb)
+
+```
+
+```{r entropy scores}
+
+# Calculate performance metrics
+scores_rf = score(explainer_rf)
+scores_xgb = score(explainer_xgb)
+
+# Add model labels
+scores_rf$model <- "Random Forest"
+scores_xgb$model <- "XGBoost"
+
+# Combine into one dataframe
+scores_df <- rbind(scores_rf, scores_xgb)
+
+# Reorder columns (optional)
+scores_df <- scores_df[, c("model", setdiff(names(scores_df), "model"))]
+
+# View results
+print(scores_df)
 
 ```
 **2. Probability-based Entropy Maps**
