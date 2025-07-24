@@ -40,19 +40,15 @@ output:
     -   [Uncertainty Insights](#uncertainty-insights)
 
 # Introduction {#introduction}
-
 The tutorial project demonstrates how to perform land cover classifications in R using machine learning algorithms such as Random Forests, XGBoost, and SVM, and compares their performance. This tutorial was presented by Dr. Hanna Meyer in July 2018. This tutorial has been adapted by Aravindh Venkatraman to include additional machine learning models for comparison. The focus is on land cover classification using Sentinel satellite data, specifically targeting the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula. This plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmland since with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control. To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field samplings mean huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this tutorial, we're going to use Sentinel satellite imagery from 2017 to map the current distribution on a section of the Banks Peninsula.
 
 # Aim of this Project {#aim-of-this-project}
-
 The technical aim of the tutorial project is to show land cover classifications, based on satellite data, can be performed in R using machine learning algorithms such as Random Forests, XGBoost and SVM. We show its performance and compare the results of the models.
 
 # Methods {#methods}
-
 This tutorial will guide you through the process of land cover (LC) classification using machine learning techniques in R. The focus is on classifying land cover types, particularly the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data. The steps include data loading, pre-processing, model training, and evaluation.
 
 ## Load required libraries
-
 We select and load the libraries and packages that are needed for this LC classification project. The selected libraries provide functions for handling raster data, reading shapefiles, performing machine learning tasks, and visualizing results.
 
 ```{r setup, message=FALSE, warning=FALSE}
@@ -83,9 +79,7 @@ library(RColorBrewer)
 ```
 
 ## Data Loading and Pre-processing
-
 ### Load and explore the data
-
 To start with, let's load the Sentinel data as well as a shapefile of the training sites.
 
 ```{r load}
@@ -102,9 +96,11 @@ print(training)
 
 ```
 
-**Overview of the data:** - The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). - The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
+**Overview of the data:** 
+The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). - The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
 
-**Visualize the data:** We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
+**Visualize the data:** 
+We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
 
 ```{r visMV, echo=TRUE, warning=FALSE, message= FALSE}
 
@@ -127,7 +123,7 @@ extr <- extract(sentinel, training, df=TRUE)
 
 # Merge extracted data with training sites
 extr <- merge(extr, training, by.x="ID", by.y="id")
-kable(extr, caption = "Merged Data") %>%
+kable(head(extr), caption = "Merged Data") %>%
   kable_styling(full_width = F, position = "left")
 
 ```
@@ -160,7 +156,8 @@ kable(test_class, caption = "Test class balance") %>%
 
 ```
 
-**Visualize relationships** To get an idea about the relationships between the spectral Sentinel data and the land cover class, we can visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
+**Visualize relationships** 
+To get an idea about the relationships between the spectral Sentinel data and the land cover class, we can visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
 
 ```{r vis_relationships}
 
@@ -184,7 +181,8 @@ ggplot(trainDat, aes(x = factor(Class), y = NDVI)) +
 
 The box plots show the distribution of the yellowness index and NDVI for each land cover class, providing insights into how these indices vary across different classes. The Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values.
 
-**Feature Plot** We can also get an impression about the separability of the classes by creating a feature plot that visualizes the location of the training samples in a scatter plot of two Sentinel channels.
+**Feature Plot** 
+We can also get an impression about the separability of the classes by creating a feature plot that visualizes the location of the training samples in a scatter plot of two Sentinel channels.
 
 ```{r featurePlot}
 
@@ -228,8 +226,8 @@ trainDat[, response] <- as.factor(trainDat[, response])
 
 # Define hyperparameter tuning grid 
 rf_grid <- expand.grid(
-  mtry = c(2, 3, 4),    # Number of variables randomly sampled at each split
-  splitrule = "gini",   # Splitting rule
+  mtry = c(2, 3, 4),  # Number of variables randomly sampled at each split
+  splitrule = "gini", # Splitting rule
   min.node.size = c(1, 5) # Minimum size of terminal nodes
 )
 
@@ -285,7 +283,7 @@ ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 ```
 
-The Random Forest model has been trained successfully, and we can see the variable importance scores for each predictor variable. The variable importance plot shows which features contribute most to the classification task, with the  being among the most important predictors.
+The Random Forest model has been trained successfully, and we can see the variable importance scores for each predictor variable. The variable importance plot shows which features contribute most to the classification task, with the XXX being among the most important predictors.
 
 **Predicting the test data with confusion matrix and scoring metrics**
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
@@ -640,42 +638,31 @@ To gain insights into the uncertainty of the model predictions, we can use the D
 # Create explainers for each model using DALEX
 explainer_rf <- DALEX::explain(model_rf, 
                                data = testDat[, predictors], 
-                               y = testDat[, response], 
-                               label = "Random Forest",
-                               predict_function = function(m, d) predict(m, d))
+                               y = testDat$Class, 
+                               label = "Random Forest")
 explainer_xgb <- DALEX::explain(model_xgb, 
                                 data = testDat[, predictors], 
-                                y = testDat[, response], 
-                                label = "XGBoost",
-                                predict_function = function(m, d) predict(m, d))
+                                y = testDat$Class, 
+                                label = "XGBoost")
 explainer_svm <- DALEX::explain(model_svm, 
                                 data = testDat[, predictors], 
-                                y = testDat[, response], 
-                                label = "Support Vector Machine",
-                                predict_function = function(m, d) predict(m, d))
+                                y = testDat$Class, 
+                                label = "Support Vector Machine")
 
-# Create a list of explainers
-explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
+# Residual performance (classification)
+mp_rf <- model_performance(explainer_rf)
+mp_xgb <- model_performance(explainer_xgb)
+mp_svm <- model_performance(explainer_svm)
 
-str(explainer_rf)
-
-# Plot model residuals
-plot_model_residuals <- function(explainer) {
-  perf <- DALEX::model_performance(explainer)
-  plot(perf) +
-    ggtitle(paste("Residual Plot -", explainer$label)) + 
-    theme_minimal()
-}
-
-explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
-
-# Generate residual plots 
-residual_plots <- lapply(explainers, plot_model_residuals)
-
-# Residual plots
-residual_plots[[1]] + residual_plots[[2]] + residual_plots[[3]]
+# Plot ROC or accuracy
+plot(mp_rf)
+plot(mp_xgb)
+plot(mp_svm)
 
 ```
+8.1. Probability-based Entropy Maps (for uncertainty)
+
+8.2. Model Disagreement Map
 
 ### Predicted Maps by the Model
 To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
@@ -719,29 +706,20 @@ names(svm_df)[3] <- "class"
 
 ```{r map plots}
 
-# Plots for Random Forest 
-p_rf <- ggplot(rf_df) + 
-  geom_raster(aes(x,y, fill = as.factor(class))) +
-  scale_fill_viridis_d(name="Class") +
-  coord_equal() +
-  ggtitle('Random Forest') +
-  theme_minimal()
+# Predict function wrapper
+predict_raster <- function(model, raster) {
+  raster_df <- as.data.frame(raster, na.rm=TRUE)
+  pred <- predict(model, raster_df)
+  out <- raster[[1]]
+  out[] <- NA
+  out[!is.na(raster[[1]])] <- as.numeric(pred)
+  return(out)
+}
 
-# Plot for XGBoost
-p_xgb <- ggplot(xgb_df) +
-  geom_raster(aes(x,y, fill = as.factor(class))) +
-  scale_fill_viridis_d(name="Class") +
-  coord_equal() +
-  ggtitle('XGBoost') +
-  theme_minimal()
-
-# Plot for Support Vector Model (SVM)
-p_svm <- ggplot(svm_df) +
-  geom_raster(aes(x,y, fill = as.factor(class))) +
-  scale_fill_viridis_d(name="Class") +
-  coord_equal() +
-  ggtitle('Support Vector Model (SVM)') +
-  theme_minimal()
+# Predict maps
+map_rf <- predict_raster(model_rf, sentinel)
+map_xgb <- predict_raster(model_xgb, sentinel)
+map_svm <- predict_raster(model_svm, sentinel)
 
 ```
 
