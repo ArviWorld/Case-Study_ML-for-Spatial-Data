@@ -638,37 +638,49 @@ To gain insights into the uncertainty of the model predictions, we can use the D
 ```{r uncertainty_analysis, echo=FALSE, message=FALSE}
 
 # Create explainers for each model using DALEX
-explainer_rf <- DALEX::explain(model_rf, data = trainDat[, predictors], y = trainDat[, response], label = "Random Forest")
-explainer_xgb <- DALEX::explain(model_xgb, data = trainDat[, predictors], y = trainDat[, response], label = "XGBoost")
-explainer_svm <- DALEX::explain(model_svm, data = trainDat[, predictors], y = trainDat[, response], label = "Support Vector Machine")
+explainer_rf <- DALEX::explain(model_rf, 
+                               data = testDat[, predictors], 
+                               y = testDat[, response], 
+                               label = "Random Forest",
+                               predict_function = function(m, d) predict(m, d))
+explainer_xgb <- DALEX::explain(model_xgb, 
+                                data = testDat[, predictors], 
+                                y = testDat[, response], 
+                                label = "XGBoost",
+                                predict_function = function(m, d) predict(m, d))
+explainer_svm <- DALEX::explain(model_svm, 
+                                data = testDat[, predictors], 
+                                y = testDat[, response], 
+                                label = "Support Vector Machine",
+                                predict_function = function(m, d) predict(m, d))
 
 # Create a list of explainers
 explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
 
+str(explainer_rf)
+
 # Plot model residuals
 plot_model_residuals <- function(explainer) {
   perf <- DALEX::model_performance(explainer)
-  autoplot(perf) +
+  plot(perf) +
     ggtitle(paste("Residual Plot -", explainer$label)) + 
     theme_minimal()
 }
+
+explainers <- list(explainer_rf, explainer_xgb, explainer_svm)
 
 # Generate residual plots 
 residual_plots <- lapply(explainers, plot_model_residuals)
 
 # Residual plots
-par(mfrow = c(1, 3))  # Layout for 3 plots
-
-residual_plots
-
-par(mfrow = c(1, 1))  # Reset to default
+residual_plots[[1]] + residual_plots[[2]] + residual_plots[[3]]
 
 ```
 
 ### Predicted Maps by the Model
 To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
 
-```{r staacking sentinel, echo=FALSE, message=FALSE}
+```{r stacking sentinel, echo=FALSE, message=FALSE}
 
 # Stacking Sentinel bands + indices
 predictors_stack <- stack(sentinel$B02, 
@@ -693,84 +705,45 @@ predictions_svm_all <- predict(model_svm, newdata = all_pixels_df)
 
 ``` {r predicted map vis}
 
-# Get unique classes and assign consistent colors
-all_classes <- sort(unique(trainDat[[response]]))
-class_colors <- brewer.pal(length(all_classes))  # You can customize this
-names(class_colors) <- all_classes
-my_labels <- paste("Class", all_classes)
+# Convert the raster to data frame with coordinates
+rf_df <- as.data.frame(predictions_rf_all, xy = TRUE, na.rm = TRUE)
+xgb_df <- as.data.frame(predictions_xgb_all, xy = TRUE, na.rm = TRUE)
+svm_df <- as.data.frame(predictions_svm_all, xy = TRUE, na.rm = TRUE)
 
-# Use reference raster to get shape
-ref_raster <- raster(sentinel)
-
-# Assign global consistent colors
-  all_classes <- sort(unique(trainDat[[response]]))
-  class_colors <- rainbow(length(all_classes))
-  names(class_colors) <- all_classes
-  my_labels <- paste("Class", all_classes)
-
-# Create a function to plot spatial predictions for each model
-plot_spatial_predictions <- function(predictions, 
-                                     reference_raster, 
-                                     title,
-                                     legend_labels = NULL, 
-                                     legend_position = "top") 
-  {
-  # Create a raster template with same dimensions and extent as reference (e.g. sentinel)
-  pred_raster <- raster(ref_raster[[5]])
-  # Safety check: make sure prediction length matches raster cells
-  if (length(predictions) != ncell(pred_raster[[5]])) {
-    stop("Length of predictions does not match number of raster cells.")
-  }
-  
-  values(pred_raster) <- as.numeric(predictions)
-
-  # Plot RGB base
-  plotRGB(reference_raster, r = 3, g = 2, b = 1, 
-          scale = 65535, stretch = "lin", 
-          main = paste("Overlay:", title))
-
-  # Mask undefined classes
-  pred_raster[!predictions %in% all_classes] <- NA
-
-  # Add transparent overlay of predictions
-  plot(pred_raster, 
-       col = class_colors[as.character(all_classes)],
-       legend = FALSE, 
-       add = TRUE, 
-       alpha = 0.4)
-
-  # Add custom legend
-  legend(legend_position,
-         legend = legend_labels,
-         fill = class_colors,
-         bg = "white",
-         cex = 0.8)
-}
-```
-
-```{r}
-
-# Plot spatial predictions for each model
-par(mfrow = c(1, 3))  # 3 plots in one row
-
-plot_spatial_predictions(predictions_rf_all, sentinel, "Random Forest",
-                         my_labels)
-plot_spatial_predictions(predictions_xbg_all, sentinel, "XGBoost",
-                         my_labels)
-plot_spatial_predictions(predictions_svm_all, sentinel, "SVM",
-                         my_labels)
-
-par(mfrow = c(1, 1))  # Reset to default
+# Rename the prediction column for clarity (assuming 1 layer per raster)
+names(rf_df)[3] <- "class"
+names(xgb_df)[3] <- "class"
+names(svm_df)[3] <- "class"
 
 ```
 
+```{r map plots}
 
-**Discussions**
+# Plots for Random Forest 
+p_rf <- ggplot(rf_df) + 
+  geom_raster(aes(x,y, fill = as.factor(class))) +
+  scale_fill_viridis_d(name="Class") +
+  coord_equal() +
+  ggtitle('Random Forest') +
+  theme_minimal()
 
+# Plot for XGBoost
+p_xgb <- ggplot(xgb_df) +
+  geom_raster(aes(x,y, fill = as.factor(class))) +
+  scale_fill_viridis_d(name="Class") +
+  coord_equal() +
+  ggtitle('XGBoost') +
+  theme_minimal()
 
+# Plot for Support Vector Model (SVM)
+p_svm <- ggplot(svm_df) +
+  geom_raster(aes(x,y, fill = as.factor(class))) +
+  scale_fill_viridis_d(name="Class") +
+  coord_equal() +
+  ggtitle('Support Vector Model (SVM)') +
+  theme_minimal()
 
-
-
+```
 
 
 
