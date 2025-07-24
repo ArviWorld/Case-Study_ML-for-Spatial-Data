@@ -60,6 +60,7 @@ library(sf)
 library(randomForest)
 library(xgboost)
 library(e1071)
+library(ROSE)
 library(ModelMetrics)
 library(ggplot2)
 library(ingredients)
@@ -154,6 +155,24 @@ kable(training_class, caption = "Training class balance") %>%
 kable(test_class, caption = "Test class balance") %>%
   kable_styling(full_width = F, position = "left")
 
+# Balance the class
+balanced_train <- upSample(x = trainDat[, predictors], y = trainDat$Class)
+balanced_test <- upSample(x = testDat[, predictors], y = testDat$Class)
+
+bal_training_class = round(prop.table(table(balanced_train$Class)) * 100, 2)
+bal_training_class = round(prop.table(table(balanced_test$Class)) * 100, 2)
+
+kable(bal_training_class, caption = "Training class balance") %>%
+  kable_styling(full_width = F, position = "left")
+kable(bal_training_class, caption = "Test class balance") %>%
+  kable_styling(full_width = F, position = "left")
+
+balanced_train$Class <- balanced_train$.Class
+balanced_train$.Class <- NULL
+
+balanced_test$Class <- balanced_test$.Class
+balanced_test$.Class <- NULL
+
 ```
 
 **Visualize relationships** 
@@ -242,7 +261,8 @@ control <- trainControl(
 
 # Train Random Forest model
 set.seed(100)
-model_rf <- train(trainDat[, predictors], trainDat[, response], 
+model_rf <- train(Class ~ ., 
+                  data = balanced_train, 
                   method = "rf", 
                   trControl = control, 
                   importance = TRUE)
