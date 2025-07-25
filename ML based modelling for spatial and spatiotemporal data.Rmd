@@ -68,6 +68,7 @@ library(patchwork)
 library(reshape2)
 library(gridExtra)
 library(dplyr)
+library(tidyr)
 library(rpart)
 library(ranger)
 library(terra)
@@ -155,23 +156,10 @@ kable(training_class, caption = "Training class balance") %>%
 kable(test_class, caption = "Test class balance") %>%
   kable_styling(full_width = F, position = "left")
 
-# Balance the class
-balanced_train <- upSample(x = trainDat[, predictors], y = trainDat$Class)
-balanced_test <- upSample(x = testDat[, predictors], y = testDat$Class)
-
-bal_training_class = round(prop.table(table(balanced_train$Class)) * 100, 2)
-bal_training_class = round(prop.table(table(balanced_test$Class)) * 100, 2)
-
-kable(bal_training_class, caption = "Training class balance") %>%
-  kable_styling(full_width = F, position = "left")
-kable(bal_training_class, caption = "Test class balance") %>%
-  kable_styling(full_width = F, position = "left")
-
-balanced_train$Class <- balanced_train$.Class
-balanced_train$.Class <- NULL
-
-balanced_test$Class <- balanced_test$.Class
-balanced_test$.Class <- NULL
+# Creating class weights to adjust the imbalance
+# Create class weights (inverse of frequency)
+class_weights <- 1 / table(trainDat$Class)
+class_weights <- class_weights / sum(class_weights)
 
 ```
 
@@ -261,10 +249,10 @@ control <- trainControl(
 
 # Train Random Forest model
 set.seed(100)
-model_rf <- train(Class ~ ., 
-                  data = balanced_train, 
+model_rf <- train(trainDat[, predictors], trainDat[, response], 
                   method = "rf", 
-                  trControl = control, 
+                  trControl = control,
+                  class.weights = class_weights,
                   importance = TRUE)
 
 ```
@@ -324,7 +312,8 @@ actual_rf <- factor(testDat[[response]], levels = true_levels)
 confusion_rf <- caret::confusionMatrix(predictions_rf, actual_rf)
 
 # Plot confusion matrix
-cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), aes(x = Reference, y = Prediction)) +
+cm_plot_rf <- ggplot(as.data.frame(confusion_rf$table), 
+                     aes(x = Reference, y = Prediction)) +
   geom_tile(aes(fill = Freq), color = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   geom_text(aes(label = Freq), color = "black") +
@@ -384,6 +373,7 @@ model_xgb <- train(x = trainDat[, predictors],
                    y = trainDat[, response],
                    method = "xgbTree",
                    trControl = control,
+                   weights = class_weights[trainDat$Class],
                    tuneGrid = xgb_grid)
   
 ```
@@ -466,8 +456,9 @@ Support Vector Machine (SVM) is a supervised learning algorithm that can be used
 
 ```{r svm, echo=TRUE, warning=FALSE}
 
-# Ensure response is a factor
+# Ensure response is a factor and class weights are a list
 trainDat[, response] <- as.factor(trainDat[, response])
+class_weights <- as.list(class_weights)
 
 # Define hyperparameter tuning grid 
 svm_grid <- expand.grid(
@@ -488,7 +479,8 @@ control <- trainControl(
 set.seed(100)
 model_svm <- train(trainDat[, predictors], trainDat[, response], 
                    method = "svmRadial", 
-                   trControl = trainControl(method = "cv", number = 10), 
+                   trControl = control,
+                   probability = TRUE,
                    tuneGrid = svm_grid)
 
 
@@ -534,7 +526,8 @@ To evaluate the performance of the Random Forest model on the test dataset, we c
 ```{r svm_confusion_matrix}
 
 # Predict on the test dataset
-predictions_svm <- predict(model_svm, newdata = testDat[, predictors],
+predictions_svm <- predict(model_svm, newdata = testDat[, predictors])
+probs_svm <- predict(model_svm, newdata = testDat[, predictors],
                            probability = TRUE)
 
 # Extract the levels from the training data response
@@ -650,6 +643,59 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
 **Discussions - Model Performance**
 The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
 
+### Predicted maps
+``` {r stacking sentinel}
+
+# Stacking Sentinel bands + indices
+predictors_stack <- stack(sentinel$B02, 
+                          sentinel$B03, 
+                          sentinel$B04, 
+                          sentinel$B05,
+                          sentinel$B06, 
+                          sentinel$B07, 
+                          sentinel$B08,
+                          sentinel$NDVI, 
+                          sentinel$yellowness)
+
+# Convert raster stack to dataframe (pixel wise)
+all_pixels_df <- as.data.frame(predictors_stack, na.rm = FALSE)
+
+# Predict for all raster cells for each model
+predictions_rf_all <- predict(model_rf, newdata = all_pixels_df)
+predictions_xbg_all <- predict(model_xgb, newdata = all_pixels_df)
+
+```
+
+
+```{r predicted maps}
+
+# Create raster layers for each model prediction
+raster_rf  <- setValues(raster(predictors_stack), predictions_rf_all)
+raster_xgb <- setValues(raster(predictors_stack), predictions_xbg_all)
+
+# Define class names and palette
+classes <- unique(training$Class)  # Replace with your actual column name
+n_classes <- length(classes)
+palette <- brewer.pal(n_classes, "Set2")
+
+# Convert to SpatRaster (terra) and assign class levels
+raster_rf  <- rast(raster_rf);  levels(raster_rf)  <- data.frame(value = 1:8, class = classes)
+raster_xgb <- rast(raster_xgb); levels(raster_xgb) <- data.frame(value = 1:8, class = classes)
+
+plotRGB(sentinel, r = 1, g = 2, b = 3, stretch = "lin", main = "RF on Sentinel RGB")
+plot(raster_rf, col = palette, alpha = 0.5, 
+     add = TRUE, axes = FALSE, legend = TRUE)
+
+plotRGB(sentinel, r = 1, g = 2, b = 3, stretch = "lin", main = "XGB on Sentinel RGB")
+plot(raster_xgb, col = palette, alpha = 0.5, 
+     add = TRUE, axes = FALSE, legend = TRUE)
+
+# Add legend
+legend("topleft", legend = classes, col = palette, 
+       pch = 19, cex = 0.8, bg = "white")
+
+```
+
 ### Uncertainly Analysis
 **1. DALEX Uncertainity Analysis**
 To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
@@ -679,35 +725,36 @@ mp_xgb <- model_performance(explainer_xgb)
 mp_svm <- model_performance(explainer_svm)
 
 # Plot ROC or accuracy
-<<<<<<< HEAD
 plot(mp_rf) 
 plot(mp_xgb)
+plot(mp_svm)
 
 ```
 
 ```{r entropy scores}
 
-# Calculate performance metrics
-scores_rf = score(explainer_rf)
-scores_xgb = score(explainer_xgb)
+# Convert list to tibble
+measures_to_df <- function(measures, model_name) {
+  as_tibble(measures, .name_repair = "minimal") %>%
+    pivot_longer(cols = everything(), names_to = "metric", 
+                 values_to = "value") %>%
+    mutate(model = model_name)
+}
 
-# Add model labels
-scores_rf$model <- "Random Forest"
-scores_xgb$model <- "XGBoost"
+# Apply to each model
+rf_measures  <- measures_to_df(mp_rf$measures, "Random Forest")
+xgb_measures <- measures_to_df(mp_xgb$measures, "XGBoost")
+svm_measures <- measures_to_df(mp_svm$measures, "SVM")
 
-# Combine into one dataframe
-scores_df <- rbind(scores_rf, scores_xgb)
+# Combine all
+all_measures <- bind_rows(rf_measures, xgb_measures, svm_measures)
 
-# Reorder columns (optional)
-scores_df <- scores_df[, c("model", setdiff(names(scores_df), "model"))]
+# Reshape: one row per measure, one column per model
+measures_wide <- all_measures %>%
+  pivot_wider(names_from = model, values_from = value)
 
-# View results
-print(scores_df)
-=======
-plot(mp_rf)
-plot(mp_xgb)
-plot(mp_svm)
->>>>>>> parent of 648b287 (Update ML based modelling for spatial and spatiotemporal data.Rmd)
+kable(measures_wide, caption = "Metric measurement for Residual performance") %>%
+  kable_styling(full_width = F, position = "left")
 
 ```
 8.1. Probability-based Entropy Maps (for uncertainty)
@@ -717,6 +764,5 @@ plot(mp_svm)
 ### Predicted Maps by the Model
 To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
 
-
-
+R
 
