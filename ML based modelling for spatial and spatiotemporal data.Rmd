@@ -106,7 +106,8 @@ print(training)
 
 ```
 
-**Overview of the data:** The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). - The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
+**Overview of the data:** 
+The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). - The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
 
 **Visualize the data:** We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
 
