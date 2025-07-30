@@ -20,7 +20,7 @@ output:
 
 # Table of Contents
 
-1.  Acknowledgements
+1.  [Acknowledgements](#acknowledgements)
 2.  [Introduction](#introduction)
 3.  [Aim of this Project](#aim-of-this-project)
 4.  [Exploratory Data Analysis - EDA](#exploratory-data-analysis-EDA)
@@ -39,20 +39,24 @@ output:
     -   [Performance Comparison](#performance-comparison)
     -   [Strengths and Weaknesses](#strengths-and-weaknesses)
     -   [Uncertainty Insights](#uncertainty-insights)
+8.  [Conclusion](#conclusion)
 
-# Introduction {#introduction}
+# Acknowledgement
+
+
+# Introduction 
 This project demonstrates how to perform land cover classifications in R using machine learning algorithms such as Random Forests, XGBoost, and SVM, and compares their performance. This was adapted from the tutorial presented by Dr. Hanna Meyer in July 2018 and has been adapted to include additional machine learning models for comparison. The focus is on land cover classification using Sentinel satellite data, specifically targeting the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula. This plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmland since with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control. To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field samplings mean huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this tutorial, we're going to use Sentinel satellite imagery from 2017 to map the current distribution on a section of the Banks Peninsula.
 
-# Aim of this Project {#aim-of-this-project}
+# Aim of this Project 
 The technical aim of the tutorial project is to show land cover classifications, based on satellite data, can be performed in R using machine learning algorithms such as Random Forests, XGBoost and SVM. We show its performance and compare the results of the models.
 
-# Exploratory Data Analysis - EDA {#exploratory-data-analysis-EDA}
+# Exploratory Data Analysis - EDA 
 This project shows the process of land cover (LC) classification using machine learning techniques using R. The focus is on classifying land cover types, particularly the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data. The workflow process includes data loading, pre-processing, model training, and evaluation.
 
 ## Load required libraries
 First, loading the libraries and packages that are needed for this LC classification project. The selected libraries provide functions for handling raster data, reading shapefiles, performing machine learning tasks, and visualizing results.
 
-```{r setup, echo = TRUE, message=FALSE, warning=FALSE}
+```{r setup, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 # Spatial and Raster data handling packages
@@ -85,8 +89,6 @@ library(vip)          # Visualizing feature importance
 
 # Visualization, Plotting & Reporting packages
 library(ggplot2)      # Powerful and flexible plotting 
-library(patchwork)    # Combines multiple ggplots into a single layout
-library(gridExtra)    # Arrange multiple plots in a grid
 library(RColorBrewer) # Predefined color palettes
 library(rasterVis)    # Customized raster visualization
 library(kableExtra)   # Table styling
@@ -97,7 +99,7 @@ library(kableExtra)   # Table styling
 ### Load and explore the data
 To start with, let's load the Sentinel data as well as a shapefile of the training sites.
 
-```{r load, echo=TRUE, warning=FALSE}
+```{r load, warning=FALSE}
 
 # Load Sentinel data
 sentinel <- stack("D:\\Study\\Machine Learning\\Geostatistics\\R-Git\\Case-Study_ML-for-Spatial-Data\\Data\\sentinel2017.grd")
@@ -125,7 +127,7 @@ viewRGB(sentinel, r=3, g=2, b=1, map.types = "Esri.WorldImagery") +
 
 ```
 
-### Data Pre-processing {#data-pre-processing}
+### Data Pre-processing
 We need to prepare the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the shapefile. This step is crucial for training the machine learning model. Then, we split the data into training and test datasets to ensure that we can evaluate the model's performance on unseen data.
 
 **Extract raster information** 
@@ -213,7 +215,7 @@ ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
 
 The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. The other feat Here the Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. With view to the feature plot note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
 
-# Machine Learning Model {#machine-learning-model}
+# Machine Learning Model 
 The split data is now ready for training machine learning models. We will implement three different algorithms: Random Forest, XGBoost, and Support Vector Machine (SVM). Each model will be trained on the training dataset and evaluated on the test dataset.
 
 **Selecting predictor and response variable**
@@ -229,7 +231,7 @@ response <- 'Class'
 
 ```
 
-## Random Forest {#random-forest}
+## Random Forest 
 Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis. Training the Random Forest model using the `randomForest` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r random_forest, echo=TRUE, warning=FALSE}
@@ -362,7 +364,7 @@ Predictions on the test/unseen data, confusion matrix shows high true positives 
 
 This means that the `Urban`, `Bare` and `Sand` are very little false positives with the RF model.
 
-## XGBoost {#xgboost}
+## XGBoost 
 XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large datasets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r xgboost, echo=TRUE, warning=FALSE, message=FALSE}
@@ -498,7 +500,7 @@ Predictions on the test/unseen data for the XGBoost model, confusion matrix show
 
 This means that the `Urban`, `Bare`, `Bush`, `Gorse` and `Sand` are hold little false positives with the XGBoost model.
 
-## Support Vector Machine (SVM) {#support-vector-machine-svm}
+## Support Vector Machine (SVM)
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r svm, echo=TRUE, warning=FALSE}
@@ -622,9 +624,9 @@ Confusion Matrix and scoring metrics provide insights into the performance of th
 
 In the SVM model, the confusion matrix shows that the model has not classified the defined land cover classes as there are lot of misclassification. Hence the model does not fit this land cover classification and will not be further used to compare the models and assess the results and discussions of this project.
 
-# Results & Discussions {#results & discussions}
-## Confusion matrices {#confusion-matrices}
-Comparing the Confusion matrices of the three models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
+# Results & Discussions 
+## Confusion matrices & Scoring metrics
+Comparing the Confusion matrices of the models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
 
 ```{r confusion_matrices, echo=FALSE, message=FALSE}
 
@@ -634,9 +636,6 @@ cm_plot_xgb
 
 ```
 
-**Discussion**
-
-## Comparison and plots of Scoring metrics
 Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, specificity) of the three models to see which model performed best overall. The accuracy metric indicates the overall correctness of the model, while sensitivity and specificity provide insights into how well the model identifies each class.
 
 ```{r scoring_metrics, echo=FALSE, message=FALSE}
@@ -686,10 +685,13 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
 
 ```
 
-**Discussions - Model Performance** The scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy, followed closely by XGBoost and SVM. The precision and sensitivity scores indicate that Random Forest and XGBoost performed well in identifying the gorse class, while SVM had slightly lower scores. The F1 score, which balances precision and recall, also shows that Random Forest and XGBoost outperformed SVM.
+**Discussion - Model Performance**
+Confusion matrix from Random Forest and XGBoost are shown here. As per the results from the confusion matrix, the Random Forest Model scores high true positives and very low false positives, when compared with the XGBoost model. Furthermore, the scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy compared to the XGBoost. The precision and sensitivity scores indicate that Random Forest performed well in identifying the gorse class than the XGBoost. The F1 score, which balances precision and recall, also shows that Random Forest outperformed XGBoost.
+
+Hence, Based on this, Random Forest Model outperforms XGBoost in predicting the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data, on the Banks Peninsula of New Zealand. 
 
 ## Predicted maps
-
+Now the predicted model maps are visualized to check the land cover classification and lay the training classes on the predicted models to verify the classification visually. 
 ```{r stacking sentinel}
 
 # Stacking Sentinel bands + indices
@@ -737,16 +739,15 @@ raster_rf  <- rast(raster_rf);  levels(raster_rf)  <- data.frame(value = 1:8, cl
 
 raster_xgb <- rast(raster_xgb); levels(raster_xgb) <- data.frame(value = 1:8, class = classes)
 
-viewRGB(sentinel, r=3, g=2, b=1, map.types = "Esri.WorldImagery") + 
-  mapview(training)
-
-mapview(raster_rf, col.regions = palette, legend = TRUE, na.color = NA) + 
+mapview(raster_rf, col.regions = palette, na.color = NA) + 
   mapview(training, zcol = "Class", col.regions = "black", alpha = 0.5)
 
-mapview(raster_xgb, col.regions = palette, legend = TRUE, na.color = NA) + 
+mapview(raster_xgb, col.regions = palette, na.color = NA) + 
   mapview(training, zcol = "Class", col.regions = "black", alpha = 0.5)
 
 ```
+
+**Discussions** 
 
 ## Uncertainly Analysis
 **1. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
@@ -775,6 +776,8 @@ plot(mp_rf)
 plot(mp_xgb)
 
 ```
+8.1. Probability-based Entropy Maps (for uncertainty)
+
 
 ```{r entropy scores}
 
@@ -802,34 +805,5 @@ kable(measures_wide, caption = "Metric measurement for Residual performance") %>
 
 ```
 
-8.1. Probability-based Entropy Maps (for uncertainty)
 
-8.2. Model Disagreement Map
-
-### Predicted Maps by the Model
-
-To visualize the spatial predictions made by each model, we can create maps that show the predicted land cover classes across the study area. This allows us to see how well each model captures the spatial distribution of different land cover types.
-
-**Feature reduction - Retraining the model with the only the top variables** As seen in the variable importance plot, `B05`,`NDVI` & `Yellowness` contributes most to the Random Forest model. Hence, we chose the top 3 important predictors for retraining the model and then apply this in the test data set.
-
-```{r feature training, echo=TRUE, warning=FALSE, message=FALSE}
-
-# selecting the top 3 variable predictors 
-predictors_rf <- c("B05", "NDVI", "yellowness")
-
-# Train Random Forest model
-set.seed(100)
-model_p_rf <- train(trainDat[, predictors_rf],
-                    trainDat[, response],
-                    method = "rf",
-                    trControl = control,
-                    class.weights = class_weights,
-                    importance = TRUE)
-
-# Print model summary
-kable(model_p_rf$results, caption = "Random Forest Model Results") %>%
-  kable_styling(full_width = F, position = "left")
-
-```
-
-The Random Forest model has been retrained successfully with the selected variables. The model achieved excellent performance across two values (2 & 3) of `mtry`, with the least logLoss results at 2. At `mtry` at 2, the model shows the least uncertainity (logLoss = 0.0238), nearly perfect classification (AUC score = 0.999), good overall class performance (balanced accuracy = 0.9797) and a balanced precision and recall (mean F1 score = 0.962).
+# Conclusion
