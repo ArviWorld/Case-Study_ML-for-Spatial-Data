@@ -741,51 +741,7 @@ mapview(raster_xgb, col.regions = palette, na.color = NA) +
 The predicted thematic maps from both the Models shows atmost accurate classification as indicated by the confusion matrix and scoring metrics. 
 
 ## Uncertainly Analysis
-**1. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX (Descriptive mAchine Learning EXplanations) package designed to help understand and explain complex machine learning models. DALEX allows to explore the model performance and diagnostics for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
-
-```{r uncertainty_analysis, message=FALSE, warning=FALSE}
-
-# DALEX - Model Performance
-# Define a safe predict function
-predict_class <- function(m, d) predict(m, d, type = "raw")
-
-# Create explainers for each model using DALEX
-explainer_rf <- DALEX::explain(model_rf, 
-                               data = testDat[, predictors], 
-                               y = testDat$Class, 
-                               label = "Random Forest")
-explainer_xgb <- DALEX::explain(model_xgb, 
-                                data = testDat[, predictors], 
-                                y = testDat$Class, 
-                                label = "XGBoost")
-
-# Residual performance (classification)
-mp_rf <- model_performance(explainer_rf, type = "classification")
-mp_xgb <- model_performance(explainer_xgb, type = "classification")
-
-# Plot model performance
-par(mfrow = c(1,2))
-plot(mp_rf, main = 'Random Forest Performance')
-plot(mp_xgb, main = 'XGBoost Performance')
-par(mfrow = c(1,1))
-
-# DALEX - Predict Diagnostics
-# Compute diagnostocs for each model
-diag_rf <- predict_diagnostics(explainer_rf, N=NULL)
-diag_xgb <- predict_diagnostics(explainer_xgb, N=NULL)
-
-# Plotting uncertainty histograms
-par(mfrow = c(1,2))
-hist(diag_rf$prediction_entropy, breaks = 30, col = "skyblue", 
-     main = "RF Prediction Entropy", xlab = "Entropy")
-hist(diag_xgb$prediction_entropy, breaks = 30, col = "salmon", 
-     main = "XGB Prediction Entropy", xlab = "Entropy")
-par(mfrow = c(1,1))
-
-```
-
-
-**2. Probability-based Entropy Maps (for uncertainty)**
+**1. Probability-based Entropy Maps (for uncertainty)**
 For this uncertainity analysis, first predicting the class probabilities for the models is required. With the predicted class probabilities, entropy per pixel is calculated and then map these entropy values as a raster data.
 ```{r entropy scores}
 
@@ -812,8 +768,8 @@ entropy_xgb <- compute_entropy(as.matrix(prob_xgb))
 
 # Setting up the plot
 # Create templates for the model
-entropy_raster_rf <- predictors_stack
-entropy_raster_xgb <- predictors_stack
+entropy_raster_rf <- raster::raster(predictors_stack)
+entropy_raster_xgb <- raster::raster(predictors_stack)
 
 # Setting all values to NA
 values(entropy_raster_rf) <- NA
@@ -824,12 +780,86 @@ values(entropy_raster_rf)[valid_idx] <- entropy_rf
 values(entropy_raster_xgb)[valid_idx] <- entropy_xgb
 
 # Plotting the entropy raster
-plot(entropy_raster_rf,  main = "Random Forest Entropy", 
-     col = palette)
+plot(entropy_raster_rf, main = "Random Forest Entropy", 
+     col = viridis::viridis(100))
 plot(entropy_raster_xgb, main = "XGBoost Entropy",       
-     col = palette)                               
+     col = viridis::viridis(100))                               
                                
 ```
+
+**2. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX (Descriptive mAchine Learning EXplanations) package designed to help understand and explain complex machine learning models. DALEX allows to explore the model performance and diagnostics for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
+
+```{r uncertainty_analysis, message=FALSE, warning=FALSE}
+
+# DALEX - Model Performance
+# Define a safe predict function
+predict_class <- function(m, d) predict(m, d, type = "raw")
+
+# Create explainers for each model using DALEX
+explainer_rf <- DALEX::explain(model_rf, 
+                               data = testDat[, predictors], 
+                               y = testDat$Class, 
+                               label = "Random Forest")
+explainer_xgb <- DALEX::explain(model_xgb, 
+                                data = testDat[, predictors], 
+                                y = testDat$Class, 
+                                label = "XGBoost")
+
+# Residual performance (classification)
+roc_rf <- model_performance(explainer_rf, type = "roc")
+roc_xgb <- model_performance(explainer_xgb, type = "roc")
+
+roc_all <- rbind(
+  data.frame(roc_rf$curve, model = "Random Forest"),
+  data.frame(roc_xgb$curve, model = "XGBoost")
+)
+
+# Plot ROC curves
+ggplot(roc_all, aes(x = false.positive.rate, y = true.positive.rate, color = model)) +
+  geom_line(size = 1.2) +
+  geom_abline(linetype = "dashed", color = "gray") +
+  labs(
+    title = "ROC Curve Comparison",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom", text = element_text(size = 14))
+
+# DALEX - Predict Diagnostics
+# Take 5 random observations from the test set
+set.seed(123)
+new_obs <- testDat[1, predictors]
+# Compute diagnostocs for each model
+diag_rf <- predict_diagnostics(explainer_rf, 
+                               new_observation =  new_obs, N=NULL)
+diag_xgb <- predict_diagnostics(explainer_xgb, 
+                                new_observation = new_obs, N=NULL)
+
+# Plotting uncertainty histograms
+hist_rf <- rbind(diag_rf$histogram_neighbors, diag_rf$histogram_all)
+hist_rf$model <- "Random Forest"
+
+hist_xgb <- rbind(diag_xgb$histogram_neighbors, diag_xgb$histogram_all)
+hist_xgb$model <- "XGBoost"
+
+# Combine all
+combined_hist <- rbind(hist_rf, hist_xgb)
+
+# Plotting the histogram 
+ggplot(combined_hist, aes(x = Var1, y = Freq, fill = direction)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~model, scales = "free_y") +
+  scale_fill_manual(values = c("neighbors" = "steelblue", "all" = "tomato")) +
+  theme_minimal() +
+  labs(title = "Similarity to Training Data",
+       x = "Distance Bin",
+       y = "Frequency",
+       fill = "Compared To") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, , size = 5))
+
+```
+
 
 
 
