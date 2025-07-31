@@ -758,7 +758,7 @@ prob_xgb <- predict(model_xgb, pred_data, type='prob')
 # Computing the entropy for the models
 compute_entropy <- function (p) {
   epsilon <- 1e-12 # Avoid log 0
-  p <- p - epsilon 
+  p <- pmax(pmin(p, 1 - epsilon), epsilon)  # Clip values between epsilon and 1 - epsilon
   -rowSums(p * log2(p))
 }
 
@@ -779,11 +779,35 @@ values(entropy_raster_xgb) <- NA
 values(entropy_raster_rf)[valid_idx] <- entropy_rf
 values(entropy_raster_xgb)[valid_idx] <- entropy_xgb
 
-# Plotting the entropy raster
-plot(entropy_raster_rf, main = "Random Forest Entropy", 
-     col = viridis::viridis(100))
-plot(entropy_raster_xgb, main = "XGBoost Entropy",       
-     col = viridis::viridis(100))                               
+# Convert raster to data frame for ggplot
+# Random Forest
+df_entropy_rf <- as.data.frame(entropy_raster_rf, 
+                               xy = TRUE, na.rm = TRUE)
+colnames(df_entropy_rf)[3] <- "entropy"
+# XGBoost
+df_entropy_xgb <- as.data.frame(entropy_raster_xgb, 
+                                xy = TRUE, na.rm = TRUE)
+colnames(df_entropy_xgb)[3] <- "entropy"
+
+# Create the ggplot for Random Forest entropy
+p_rf <- ggplot(df_entropy_rf, aes(x = x, y = y, fill = entropy)) +
+  geom_raster() +
+  scale_fill_viridis(option = "viridis") +
+  coord_equal() +
+  labs(title = "Entropy - Random Forest", fill = "Entropy") +
+  theme_minimal()
+
+# Create the ggplot for XGBoost entropy
+p_xgb <- ggplot(df_entropy_xgb, aes(x = x, y = y, fill = entropy)) +
+  geom_raster() +
+  scale_fill_viridis(option = "viridis") +
+  coord_equal() +
+  labs(title = "Entropy - XGBoost", fill = "Entropy") +
+  theme_minimal()         
+
+# Plot the entropy maps
+p_rf
+p_xgb
                                
 ```
 
