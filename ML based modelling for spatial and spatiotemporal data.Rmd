@@ -574,7 +574,7 @@ The SVM model has not been trained successfully because the model achieved poor 
 
 **Predicting the test data with confusion matrix and scoring metrics** To evaluate the performance of the SVM model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
 
-```{r svm_confusion_matrix, echo=TRUE, warning=FALSE, message=FALSE}
+```{r svm_confusion_matrix, warning=FALSE, message=FALSE}
 
 # Predict on the test dataset
 predictions_svm <- predict(model_svm, 
@@ -628,7 +628,7 @@ In the SVM model, the confusion matrix shows that the model has not classified t
 ## Confusion matrices & Scoring metrics
 Comparing the Confusion matrices of the models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
 
-```{r confusion_matrices, echo=FALSE, message=FALSE}
+```{r confusion_matrices, message=FALSE}
 
 # Create a list of confusion matrices for each model
 cm_plot_rf
@@ -638,7 +638,7 @@ cm_plot_xgb
 
 Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, specificity) of the three models to see which model performed best overall. The accuracy metric indicates the overall correctness of the model, while sensitivity and specificity provide insights into how well the model identifies each class.
 
-```{r scoring_metrics, echo=FALSE, message=FALSE}
+```{r scoring_metrics, message=FALSE}
 
 # Create a data frame to hold the scoring metrics for each model from the test dataset
 scoring_df <- data.frame(
@@ -682,6 +682,30 @@ ggplot(scoring_df_long, aes(x = Model, y = value, fill = variable)) +
   scale_fill_brewer(palette = "Set1") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+``` {r model performance metrics}
+# Convert list to tibble
+measures_to_df <- function(measures, model_name) {
+  as_tibble(measures, .name_repair = "minimal") %>%
+    pivot_longer(cols = everything(), names_to = "metric", 
+                 values_to = "value") %>%
+    mutate(model = model_name)
+}
+
+# Apply to each model
+rf_measures  <- measures_to_df(mp_rf$measures, "Random Forest")
+xgb_measures <- measures_to_df(mp_xgb$measures, "XGBoost")
+
+# Combine all
+all_measures <- bind_rows(rf_measures, xgb_measures)
+
+# Reshape: one row per measure, one column per model
+measures_wide <- all_measures %>%
+  pivot_wider(names_from = model, values_from = value)
+
+kable(measures_wide, caption = "Metric measurement for Residual performance") %>%
+  kable_styling(full_width = F, position = "left")
 
 ```
 
@@ -693,7 +717,7 @@ Hence, Based on this, Random Forest Model outperforms XGBoost in predicting the 
 ## Uncertainly Analysis
 **1. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
 
-```{r uncertainty_analysis, echo=FALSE, message=FALSE}
+```{r uncertainty_analysis, message=FALSE}
 
 # Define a safe predict function
 predict_class <- function(m, d) predict(m, d, type = "raw")
@@ -722,27 +746,35 @@ For this uncertainity analysis, first predicting the class probabilities for the
 
 ```{r entropy scores}
 
-# Convert list to tibble
-measures_to_df <- function(measures, model_name) {
-  as_tibble(measures, .name_repair = "minimal") %>%
-    pivot_longer(cols = everything(), names_to = "metric", 
-                 values_to = "value") %>%
-    mutate(model = model_name)
+# Preparing the data
+# Convert the predictors to dataframe
+pred_data <- as.data.frame(predictors_stack, na.rm = TRUE)
+
+# Predicting the model probabilities
+prob_rf <- predict(model_rf, pred_data, type='prob')
+prob_rf
+# Convert pred_data to matrix for XGBoost
+dtest <- xgb.DMatrix(data = as.matrix(pred_data))
+prob_xgb <- predict(model_xgb, dtest)
+# Reshaping the prob into a matrix 
+prob_xgb <- matrix(prob_xgb, ncol=length(classes), byrow=TRUE)
+colnames(prob_xgb) <- classes
+
+# Computing the entropy for the models
+compute_entropy <- function (p) {
+  epsilon <- 1e-12 # Avoid log 0
+  p <- p - epsilon 
+  -rowSums(p * log2(p))
 }
 
-# Apply to each model
-rf_measures  <- measures_to_df(mp_rf$measures, "Random Forest")
-xgb_measures <- measures_to_df(mp_xgb$measures, "XGBoost")
+# Apply the model probabilitites to the entropy function
+entropy_rf <- compute_entropy(as.matrix(prob_rf))
+entropy_xgb <- compute_entropy(as.matrix(prob_xgb))
 
-# Combine all
-all_measures <- bind_rows(rf_measures, xgb_measures)
+# Plotting the entropy to raster data
 
-# Reshape: one row per measure, one column per model
-measures_wide <- all_measures %>%
-  pivot_wider(names_from = model, values_from = value)
-
-kable(measures_wide, caption = "Metric measurement for Residual performance") %>%
-  kable_styling(full_width = F, position = "left")
+                               
+                               
 
 ```
 
