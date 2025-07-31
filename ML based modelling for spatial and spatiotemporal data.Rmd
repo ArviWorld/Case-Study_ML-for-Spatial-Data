@@ -717,8 +717,8 @@ plot(mp_rf)
 plot(mp_xgb)
 
 ```
-8.1. Probability-based Entropy Maps (for uncertainty)
-
+**2. Probability-based Entropy Maps (for uncertainty)**
+For this uncertainity analysis, first predicting the class probabilities for the models is required. With the predicted class probabilities, entropy per pixel is calculated and then map these entropy values as a raster data. 
 
 ```{r entropy scores}
 
