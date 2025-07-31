@@ -807,16 +807,19 @@ p_xgb <- ggplot(df_entropy_xgb, aes(x = x, y = y, fill = entropy)) +
   theme_minimal()         
 
 # Plot the entropy maps
+par(mfrow=c(1,2))
 p_rf
 p_xgb
-                               
+par(mfrow=c(1,1))                               
 ```
+**Discussion** These entropy maps shows the uncertainity in the predictions in the model. More yellow the higher entropy and more purple the lower entropy. Low entropy signifies the confidence in predictions where high entropy shows the uncertaininty and might be similar probabilities to multiple class. 
+In these maps, RF entropy maps shows more gradual transitions and less extreme entropy which means that the model could be robust to noise and less flexible. On the contrary, XGBoost shows sharper contrasts and more high entropy areas particularty at the class boundaries. This could mean the model classification is sensitive to the class boundaries and also could be the problem of overfitting.
 
 **2. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX (Descriptive mAchine Learning EXplanations) package designed to help understand and explain complex machine learning models. DALEX allows to explore the model performance and diagnostics for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
 
 ```{r uncertainty_analysis, message=FALSE, warning=FALSE}
 
-# DALEX - Model Performance
+# DALEX - Prediction Diagnostics
 # Define a safe predict function
 predict_class <- function(m, d) predict(m, d, type = "raw")
 
@@ -830,32 +833,10 @@ explainer_xgb <- DALEX::explain(model_xgb,
                                 y = testDat$Class, 
                                 label = "XGBoost")
 
-# Residual performance (classification)
-roc_rf <- model_performance(explainer_rf, type = "roc")
-roc_xgb <- model_performance(explainer_xgb, type = "roc")
-
-roc_all <- rbind(
-  data.frame(roc_rf$curve, model = "Random Forest"),
-  data.frame(roc_xgb$curve, model = "XGBoost")
-)
-
-# Plot ROC curves
-ggplot(roc_all, aes(x = false.positive.rate, y = true.positive.rate, color = model)) +
-  geom_line(size = 1.2) +
-  geom_abline(linetype = "dashed", color = "gray") +
-  labs(
-    title = "ROC Curve Comparison",
-    x = "False Positive Rate",
-    y = "True Positive Rate"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom", text = element_text(size = 14))
-
-# DALEX - Predict Diagnostics
 # Take 5 random observations from the test set
 set.seed(123)
 new_obs <- testDat[1, predictors]
-# Compute diagnostocs for each model
+# Compute diagnostics for each model
 diag_rf <- predict_diagnostics(explainer_rf, 
                                new_observation =  new_obs, N=NULL)
 diag_xgb <- predict_diagnostics(explainer_xgb, 
@@ -885,7 +866,9 @@ ggplot(combined_hist, aes(x = Var1, y = Freq, fill = direction)) +
 
 ```
 
-
+**Discussion**
+Both the models show a sharp spike at very low bin distance bins which means that the test dataset is highly similar to the training dataset, particularly in the XGBoost. This suggests that both models use very similar training data to make predictions. In the RF model, the model red bar are all negative, which shows that the test data as a whole is less similar to the entire training data distribution. This suggests that the RF model has some overfitting and learned well from local structures.
+From both the plots, RF has more spread across the bin whereas the XGBoost has a sharp spike at the lowest bin. This shows that the XGBoost heavily relies on few highly similar instances, whereas RF has spreads its attention. 
 
 
 # Conclusion
