@@ -648,7 +648,7 @@ kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support 
 
 ```
 
-**Results** Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test data set. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+**Results** Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test data set. The confusion matrix shows how many instances were highly misclassified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) shows the model's poor performance.
 
 The SVM model has not been trained successfully because the model achieved poor performance having very low scores for the different scoring matrix. The confusion matrix shows that the model has not classified the defined land cover classes as there are lot of misclassification. Hence the model does not fit this land cover classification and will not be further used to compare the models and assess the results and discussions of this project.
 
@@ -666,7 +666,7 @@ cm_plot_xgb
 
 ```
 
-Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, specificity) of the three models to see which model performed best overall. The accuracy metric indicates the overall correctness of the model, while sensitivity and specificity provide insights into how well the model identifies each class.
+Compare the scoring metrics (precision, f1score, recall, accuracy, sensitivity, specificity) of the `RF` & `XGBoost` models to see which model performed best overall. The accuracy metric indicates the overall correctness of the model, while sensitivity and specificity provide insights into how well the model identifies each class.
 
 ```{r scoring_metrics, message=FALSE}
 
@@ -705,7 +705,7 @@ ggplot(scoring_df_long, aes(x = Metric, y = Score, fill = Model)) +
 
 ```
 
-**Discussion - Model Performance** Confusion matrix from Random Forest and XGBoost are shown here. As per the results from the confusion matrix, the Random Forest Model scores high true positives and very low false positives, when compared with the XGBoost model. Furthermore, the scoring metrics provide a comprehensive overview of the performance of each model. The Random Forest model achieved the highest accuracy compared to the XGBoost. The precision and sensitivity scores indicate that Random Forest performed well in identifying the gorse class than the XGBoost. The F1 score, which balances precision and recall, also shows that Random Forest outperformed XGBoost.
+**Discussion - Model Performance:** Confusion matrix from `Random Forest` and `XGBoost` are shown here. As per the results from the confusion matrix, the `Random Forest` Model scores high true positives and very low false positives, when compared with the `XGBoost` model. Furthermore, the scoring metrics provide a comprehensive overview of the performance of each model. The `Random Forest` model achieved the highest accuracy compared to the `XGBoost`. The precision and sensitivity scores indicate that Random Forest performed well in identifying the **gorse** class than the `XGBoost`. The F1 score, which balances precision and recall, also shows that `Random Forest` outperformed `XGBoost`.
 
 ## Predicted maps
 
@@ -766,7 +766,7 @@ mapview(raster_xgb, col.regions = palette, na.color = NA) +
 
 ```
 
-**Discussions** The predicted thematic maps from both the Models shows atmost accurate classification as indicated by the confusion matrix and scoring metrics.
+**Discussions:** The predicted thematic maps are overlayed with the training land cover classes to visually validated the model performance. Based on the maps, althought there are slight misclassifications, both the Models shows utmost accurate classification as indicated by the confusion matrix and scoring metrics.
 
 ## Uncertainly Analysis
 
