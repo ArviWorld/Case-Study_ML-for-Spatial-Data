@@ -5,17 +5,16 @@ tutorial_by: "Dr. Hanna Meyer"
 adapted_by: "Aravindh Venkatraman"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 always_allow_html: true
-
 output:
+  html_document: 
+    toc: true
+    number_sections: true
   pdf_document: 
     highlight: tango
     latex_engine: xelatex
     number_sections: yes
     toc: yes
     toc_depth: 6
-  html_document: 
-    toc: true
-    number_sections: true
   word_document: 
     toc: true
     toc_depth: 6
@@ -57,7 +56,7 @@ output:
 
 **Acknowledgement** I am sincerely thank the OpenGeoHub Foundation for their work in making open source geospatial models for everyone. The videos posted in their website on tutorials to learn remote sensing concepts and understand the workflow structures in working with geospatial data analysis. Particular mention to the tutorial *"Machine Learning for Spatial Data"* by Dr. Hanna Meyer which helped me to work on this project.
 
-Furthermore, I thank the professional czertification courses relevant to understanding programming, machine learning, remote sensing concepts which helped me to work on this project.
+Furthermore, I thank the professional certification courses relevant to understanding programming, machine learning, remote sensing concepts which helped me to work on this project.
 
 **Use of generative artificial intelligence** Generative artificial intelligence (GenAI) was mainly used for creating charts and adjusting visualization parameters in R. GenAI was also used for code debugging. However, the responses provided by GenAI were critically judged before being implemented.
 
