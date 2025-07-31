@@ -690,6 +690,62 @@ Confusion matrix from Random Forest and XGBoost are shown here. As per the resul
 
 Hence, Based on this, Random Forest Model outperforms XGBoost in predicting the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data, on the Banks Peninsula of New Zealand. 
 
+## Uncertainly Analysis
+**1. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
+
+```{r uncertainty_analysis, echo=FALSE, message=FALSE}
+
+# Define a safe predict function
+predict_class <- function(m, d) predict(m, d, type = "raw")
+
+# Create explainers for each model using DALEX
+explainer_rf <- DALEX::explain(model_rf, 
+                               data = testDat[, predictors], 
+                               y = testDat$Class, 
+                               label = "Random Forest")
+explainer_xgb <- DALEX::explain(model_xgb, 
+                                data = testDat[, predictors], 
+                                y = testDat$Class, 
+                                label = "XGBoost")
+
+# Residual performance (classification)
+mp_rf <- model_performance(explainer_rf)
+mp_xgb <- model_performance(explainer_xgb)
+
+# Plot ROC or accuracy
+plot(mp_rf)
+plot(mp_xgb)
+
+```
+8.1. Probability-based Entropy Maps (for uncertainty)
+
+
+```{r entropy scores}
+
+# Convert list to tibble
+measures_to_df <- function(measures, model_name) {
+  as_tibble(measures, .name_repair = "minimal") %>%
+    pivot_longer(cols = everything(), names_to = "metric", 
+                 values_to = "value") %>%
+    mutate(model = model_name)
+}
+
+# Apply to each model
+rf_measures  <- measures_to_df(mp_rf$measures, "Random Forest")
+xgb_measures <- measures_to_df(mp_xgb$measures, "XGBoost")
+
+# Combine all
+all_measures <- bind_rows(rf_measures, xgb_measures)
+
+# Reshape: one row per measure, one column per model
+measures_wide <- all_measures %>%
+  pivot_wider(names_from = model, values_from = value)
+
+kable(measures_wide, caption = "Metric measurement for Residual performance") %>%
+  kable_styling(full_width = F, position = "left")
+
+```
+
 ## Predicted maps
 Now the predicted model maps are visualized to check the land cover classification and lay the training classes on the predicted models to verify the classification visually. 
 ```{r stacking sentinel}
@@ -748,62 +804,7 @@ mapview(raster_xgb, col.regions = palette, na.color = NA) +
 ```
 
 **Discussions** 
-
-## Uncertainly Analysis
-**1. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX package to create an explainer for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
-
-```{r uncertainty_analysis, echo=FALSE, message=FALSE}
-
-# Define a safe predict function
-predict_class <- function(m, d) predict(m, d, type = "raw")
-
-# Create explainers for each model using DALEX
-explainer_rf <- DALEX::explain(model_rf, 
-                               data = testDat[, predictors], 
-                               y = testDat$Class, 
-                               label = "Random Forest")
-explainer_xgb <- DALEX::explain(model_xgb, 
-                                data = testDat[, predictors], 
-                                y = testDat$Class, 
-                                label = "XGBoost")
-
-# Residual performance (classification)
-mp_rf <- model_performance(explainer_rf)
-mp_xgb <- model_performance(explainer_xgb)
-
-# Plot ROC or accuracy
-plot(mp_rf)
-plot(mp_xgb)
-
-```
-8.1. Probability-based Entropy Maps (for uncertainty)
-
-
-```{r entropy scores}
-
-# Convert list to tibble
-measures_to_df <- function(measures, model_name) {
-  as_tibble(measures, .name_repair = "minimal") %>%
-    pivot_longer(cols = everything(), names_to = "metric", 
-                 values_to = "value") %>%
-    mutate(model = model_name)
-}
-
-# Apply to each model
-rf_measures  <- measures_to_df(mp_rf$measures, "Random Forest")
-xgb_measures <- measures_to_df(mp_xgb$measures, "XGBoost")
-
-# Combine all
-all_measures <- bind_rows(rf_measures, xgb_measures)
-
-# Reshape: one row per measure, one column per model
-measures_wide <- all_measures %>%
-  pivot_wider(names_from = model, values_from = value)
-
-kable(measures_wide, caption = "Metric measurement for Residual performance") %>%
-  kable_styling(full_width = F, position = "left")
-
-```
-
+The predicted thematic maps from the Models shows atmost accurate calssification as indicated by the confusion matrix and scoring metrics. 
 
 # Conclusion
+
