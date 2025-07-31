@@ -498,7 +498,7 @@ Predictions on the test/unseen data for the XGBoost model, confusion matrix show
   - Out of 733 `Bush` Class, 1 was predicted as `Water` 
   - Out of 455 `Bare` class, 7 were predicted as `Urban` and 1 as `Bush`.
 
-This means that the `Urban`, `Sand`, `Gorse`, `Bush` and `Bare` are hold little false positives with the XGBoost model.
+This means that the `Urban`, `Sand`, `Gorse`, `Bush` and `Bare` show little false positives with the XGBoost model.
 
 ## Support Vector Machine (SVM)
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
