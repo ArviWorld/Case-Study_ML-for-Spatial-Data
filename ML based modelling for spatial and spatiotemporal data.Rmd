@@ -747,8 +747,9 @@ For this uncertainity analysis, first predicting the class probabilities for the
 ```{r entropy scores}
 
 # Preparing the data
-# Convert the predictors to dataframe
+# Convert the raster predictors to dataframe
 pred_data <- as.data.frame(predictors_stack, na.rm = TRUE)
+
 
 # Predicting the model probabilities
 prob_rf <- predict(model_rf, pred_data, type='prob')
@@ -771,9 +772,22 @@ compute_entropy <- function (p) {
 entropy_rf <- compute_entropy(as.matrix(prob_rf))
 entropy_xgb <- compute_entropy(as.matrix(prob_xgb))
 
-# Plotting the entropy to raster data
+# Setting up the plot
+# Create templates for the model
+entropy_raster_rf <- predictors.stack[[1]]
+entropy_raster_xgb <- predictors.stack[[1]]
+# Setting all values to NA
+values(entropy_raster_rf) <- NA
+values(entropy_raster_xgb) <- NA
+# Inserting the entropy values at valid locations
+values(entropy_raster_rf)[!is.na(rowSums(pred_data))] <- entropy_rf
+values(entropy_raster_xgb)[!is.na(rowSums(pred_data))] <- entropy_xgb
 
-                               
+# Plotting the entropy raster
+plot(entropy_raster_rf,  main = "Random Forest Entropy", 
+     col = viridis(100))
+plot(entropy_raster_xgb, main = "XGBoost Entropy",       
+     col = viridis(100))                               
                                
 
 ```
