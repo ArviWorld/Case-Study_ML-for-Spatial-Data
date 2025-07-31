@@ -92,6 +92,7 @@ library(ggplot2)      # Powerful and flexible plotting
 library(RColorBrewer) # Predefined color palettes
 library(rasterVis)    # Customized raster visualization
 library(kableExtra)   # Table styling
+library(viridis)      # Colorblind-friendly maps
 
 ```
 
@@ -743,7 +744,7 @@ The predicted thematic maps from both the Models shows atmost accurate classific
 ## Uncertainly Analysis
 **1. Probability-based Entropy Maps (for uncertainty)**
 For this uncertainity analysis, first predicting the class probabilities for the models is required. With the predicted class probabilities, entropy per pixel is calculated and then map these entropy values as a raster data.
-```{r entropy scores}
+```{r entropy map}
 
 # Preparing the data
 # Convert the raster predictors to dataframe
