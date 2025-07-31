@@ -172,6 +172,7 @@ kable(test_class, caption = "Test class balance") %>%
   kable_styling(full_width = F, position = "left")
 
 ```
+Class balance inferences shows that there are severe class imbalance within both training and test datasets. It is required to balance the class using upsampling as the `Water` has a high frequency and the remaining classes are similar to each other and much lower that the `Water`.
 
 **Visualize relationships** 
 To get an idea about the relationships between the spectral Sentinel data and the land cover class, we can visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
@@ -195,7 +196,6 @@ ggplot(trainDat, aes(x = factor(Class), y = NDVI)) +
   theme_minimal()
 
 ```
-
 The box plots show the distribution of the yellowness index and NDVI for each land cover class, providing insights into how these indices vary across different classes. The Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values.
 
 **Feature Plot**
@@ -308,7 +308,7 @@ The Random Forest model has been retrained successfully with the selected variab
   - good overall class performance (*balanced accuracy = 0.9831*) and 
   - a balanced precision and recall (*mean F1 score = 0.968*).
 
-The variable importance scores for each predictor variable is derived. The variable importance plot shows which features contribute most to the classification task, with the `B05`,`NDVI` & `Yellowness` being among the top 3 important predictors.
+The variable importance scores for each predictor variable is derived. The variable importance plot shows which features contribute most to the classification task, with the `NDVI`, `Yellowness` & `B05` being among the top 3 important predictors.
 
 **Predicting the test data with confusion matrix and scoring metrics** 
 To evaluate the performance of the Random Forest model on the test dataset, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test dataset.
@@ -355,7 +355,7 @@ kable(confusion_rf$byClass, caption = "Sensitivity and Specificity for Random Fo
 
 **Results**
 Confusion Matrix and scoring metrics provide insights into the performance of the Random Forest model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance. 
-Predictions on the test/unseen data, confusion matrix shows high true positives for all the classes predictions with an overall accuracy of 99.56%, but do have some irregularities in the classification. From the confusion matrix, 
+Predictions on the test/unseen data, confusion matrix shows high true positives for all the classes predictions with an overall accuracy of 99.5%, but do have some irregularities in the classification. From the confusion matrix, 
   - `Water`, `Grassland`, `Gorse`, & `Bush` are 100% predicted and classfied correctly. 
   - Out of 738 `Forestry` Class, 1 was predicted as Bush
   - Out of 182 `Urban` Class, 10 were predicted as `Sand` and 11 as `Bare`.
@@ -498,7 +498,7 @@ Predictions on the test/unseen data for the XGBoost model, confusion matrix show
   - Out of 733 `Bush` Class, 1 was predicted as `Water` 
   - Out of 455 `Bare` class, 7 were predicted as `Urban` and 1 as `Bush`.
 
-This means that the `Urban`, `Bare`, `Bush`, `Gorse` and `Sand` are hold little false positives with the XGBoost model.
+This means that the `Urban`, `Sand`, `Gorse`, `Bush` and `Bare` are hold little false positives with the XGBoost model.
 
 ## Support Vector Machine (SVM)
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training dataset, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
