@@ -3,82 +3,58 @@ title:  "Predicting the invasive species 'Gorse (Ulex europaeus)' on the Banks P
 subtitle: "Land cover classification with ML models in R"
 tutorial_by: "Dr. Hanna Meyer"
 adapted_by: "Aravindh Venkatraman"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+date: "30 July 2025"
 always_allow_html: true
 output:
-  html_document: 
-    toc: true
+  html_document:
+    toc: true 
+    toc_float: true
     number_sections: true
-  pdf_document: 
-    highlight: tango
-    latex_engine: xelatex
-    number_sections: yes
-    toc: yes
-    toc_depth: 6
-  word_document: 
-    toc: true
-    toc_depth: 6
+    toc_depth: 3
 ---
 
-# Table of Contents
+# Table of Contents {.unnumbered}
 
 [Statements](#statements)
-
 [Executive Summary](#executive-summary)
-
 1.  [Introduction](#introduction)
-
 2.  [Aim and Methodology of this Project](#aim-and-methodology-of-this-project)
-
 3.  [Exploratory Data Analysis - EDA](#exploratory-data-analysis-EDA)
-
-    -   [Data Loading](#data-loading)
-
-    -   [Data Pre-processing](#data-pre-processing)
-
 4.  [Machine Learning Model](#machine-learning-model)
-
-    -   [Random Forest](#random-forest)
-
-    -   [XGBoost](#xgboost)
-
-    -   [Support Vector Machine (SVM)](#support-vector-machine-svm)
-
 5.  [Results](#results)
-
-    -   [Predicted Maps](#predicted-maps)
-
-    -   [Model Performance & Uncertainity Analysis](#model-performance-&-uncertainity-analysis)
-
 6.  [Conclusion](#conclusion)
 
-# Statements 
+# Statements {#statements .unnumbered}
 
-**Acknowledgement** I am sincerely thank the OpenGeoHub Foundation for their work in making open source geospatial models for everyone. The videos posted in their website on tutorials to learn remote sensing concepts and understand the workflow structures in working with geospatial data analysis. Particular mention to the tutorial *"Machine Learning for Spatial Data"* by Dr. Hanna Meyer which helped me to work on this project.
+**Acknowledgement**\
+I am sincerely thank the OpenGeoHub Foundation for their work in making open source geospatial models for everyone. The videos posted in their website on tutorials to learn remote sensing concepts and understand the workflow structures in working with geospatial data analysis. Particular mention to the tutorial *"Machine Learning for Spatial Data"* by Dr. Hanna Meyer which helped me to work on this project.
 
 Furthermore, I thank the professional certification courses relevant to understanding programming, machine learning, remote sensing concepts which helped me to work on this project.
 
-**Use of generative artificial intelligence** Generative artificial intelligence (GenAI) was mainly used for creating charts and adjusting visualization parameters in R. GenAI was also used for code debugging. However, the responses provided by GenAI were critically judged before being implemented.
+**Use of generative artificial intelligence**\
+Generative artificial intelligence (GenAI) was mainly used for creating charts and adjusting visualization parameters in R. GenAI was also used for code debugging. However, the responses provided by GenAI were critically judged before being implemented.
 
-# Executive Summary 
+# Executive Summary {#executive-summary .unnumbered}
 
-**Problem Statement** **Gorse (*Ulex europaeus*)** plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmlands which is associated with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control and field sampling are expensive for developing management strategies. It's of high importance to map the distribution of such invasive plants using remote sensing methods.
+**Problem Statement**\
+**Gorse (*Ulex europaeus*)** plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmlands which is associated with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control and field sampling are expensive for developing management strategies. It's of high importance to map the distribution of such invasive plants using remote sensing methods.
 
-**Project Aim and Focus** The project aim and focus is on using Machine Learning models to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula of New Zealand.
+**Project Aim and Focus**\
+The project aim and focus is on using Machine Learning models to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula of New Zealand.
 
-**Raw data used** Sentinel satellite data and plotted land cover class of a section of the Banks Peninsula of New Zealand.
+**Raw data used**\
+Sentinel satellite data and plotted land cover class of a section of the Banks Peninsula of New Zealand.
 
-**Methodology** The following methodology was undertaken for this project,
+**Methodology**\
+The following methodology was undertaken for this project,\
+- Raw data and land cover classes are visualized and merged to a single data set to build the Machine Learning models (`Random Forest`, `XGBoost` and `Support Vector Machine`).\
+- The merged data set is split into 30% training and 70% test data which is used to train and predict using the models.\
+- Various analysis such as confusion matrix, scoring metrics, predictive & entropy maps, and uncertainty diagnostics were performed to analyse the models performance in land cover classification and predicting the invasive plant species.
 
--   Raw data and land cover classes are visualized and merged to a single data set to build the Machine Learning models (`Random Forest`, `XGBoost` and `Support Vector Machine`).
+**Results**\
+Out of the three models, `RF` and `XGBoost` model performs very well and `SVM` model is not up to par in classifying the land cover class using the satellite images. Based on the various analysis, `Random Forest` with the highest accuracy of 99.33%, Model outperforms `XGBoost` in predicting the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data, on the Banks Peninsula of NewZealand.
 
--   The merged data set is split into 30% training and 70% test data which is used to train and predict using the models.
-
--   Various analysis such as confusion matrix, scoring metrics, predictive & entropy maps, and uncertainty diagnostics were performed to analyse the models performance in land cover classification and predicting the invasive plant species.
-
-**Results** Out of the three models, `RF` and `XGBoost` model performs very well and `SVM` model is not up to par in classifying the land cover class using the satellite images. Based on the various analysis, `Random Forest` with the highest accuracy of 99.33%, Model outperforms `XGBoost` in predicting the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data, on the Banks Peninsula of NewZealand.
-
-# 1. Introduction 
+# Introduction {#introduction}
 
 This project demonstrates land cover classifications in R using machine learning algorithms such as `Random Forest`, `XGBoost`, and `SVM`, and compares their performance. This was adapted from the tutorial presented by Dr. Hanna Meyer in July 2018 and has been adapted to include additional machine learning models for comparison.
 
@@ -86,7 +62,7 @@ The focus is on land cover classification using sentinel satellite data, specifi
 
 Each year millions of dollars are spent for its control. To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field sampling means huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this tutorial, we're going to use Sentinel satellite imagery from 2017 to map the current land cover distribution on a section of the Banks Peninsula.
 
-# 2. Aim and Methodology of this Project 
+# Aim and Methodology of this Project {#aim-and-methodology-of-this-project}
 
 The project aim is to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula and focus on using machine learning algorithms such as Random Forests, XGBoost and SVM to perform this project. We show its performance and compare the results of the models.
 
@@ -98,7 +74,7 @@ The following methodology was undertaken for this project,
 
 -   Various analysis such as confusion matrix, scoring metrics, predictive & entropy maps, and uncertainty diagnostics were performed to analyse the models performance in land cover classification and predicting the invasive plant species.
 
-# 3. Exploratory Data Analysis - EDA
+# Exploratory Data Analysis - EDA
 
 This project shows the process of land cover (LC) classification using machine learning techniques using R. The focus is on classifying land cover types, particularly the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data.
 
@@ -179,7 +155,7 @@ viewRGB(sentinel, r=3, g=2, b=1, map.types = "Esri.WorldImagery") +
 
 ```
 
-### Data Pre-processing 
+### Data Pre-processing {#data-pre-processing}
 
 We need to prepare the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the training shape file. This step is crucial for training the machine learning model. Then, we split the data into training and test data set to ensure that we can evaluate the model's performance on unseen data.
 
@@ -266,7 +242,7 @@ ggplot(trainDat, aes(x = B08, y = yellowness, color = factor(Class))) +
 
 The feature plot shows the distribution of training samples in the feature space defined by Sentinel Band 8 (NIR) and the yellowness index. It helps us visualize how well the different land cover classes can be separated based on these features. The Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values. Based on the feature plot, note that there is only low separability considering Sentinel channel 3 and 4 (green and red) but high separability when channel 8 (near infrared) or the yellowness index is included.
 
-# 4. Machine Learning Model 
+# Machine Learning Model {#machine-learning-model}
 
 The split data is now ready for training machine learning models and ready for implementation in the three different algorithms: `Random Forest`, `XGBoost`, and `Support Vector Machine (SVM)`. Each model will be trained on the training data set and evaluated on the test data set.
 
@@ -282,7 +258,7 @@ response <- 'Class'
 
 ```
 
-## Random Forest 
+## Random Forest {#random-forest}
 
 Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis. Training the Random Forest model using the `randomForest` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
@@ -423,7 +399,7 @@ Predictions on the test/unseen data, confusion matrix shows high true positives 
 
 This means that the `Urban`, `Bare` and `Sand` show very little false positives with the RF model.
 
-## XGBoost (Extreme Gradient Boosting) 
+## XGBoost (Extreme Gradient Boosting)
 
 XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large data sets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
@@ -570,7 +546,7 @@ Predictions on the test/unseen data for the XGBoost model, confusion matrix show
 
 This means that the `Urban`, `Sand`, `Gorse`, `Bush` and `Bare` show little false positives with the XGBoost model.
 
-## Support Vector Machine (SVM) 
+## Support Vector Machine (SVM) {#support-vector-machine-svm}
 
 Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
 
@@ -690,9 +666,9 @@ kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support 
 
 The SVM model has not been trained successfully because the model achieved poor performance having very low scores for the different scoring matrix. The confusion matrix shows that the model has not classified the defined land cover classes as there are lot of misclassification. Hence the model does not fit this land cover classification and will not be further used to compare the models and assess the results and discussions of this project.
 
-# 5. Results & Discussions
+# Results & Discussions
 
-## Predicted maps 
+## Predicted maps {#predicted-maps}
 
 Now the predicted model maps are visualized to check the land cover classification and lay the training classes on the predicted models to verify the classification visually.
 
@@ -936,7 +912,7 @@ ggplot(combined_hist, aes(x = Var1, y = Freq, fill = direction)) +
 
 **Discussion:** Both the models show a sharp spike at very low bin distance bins which means that the test dataset is highly similar to the training dataset, particularly in the XGBoost. This suggests that both models use very similar training data to make predictions. In the RF model, the model red bar are all negative, which shows that the test data as a whole is less similar to the entire training data distribution. This suggests that the RF model has some overfitting and learned well from local structures. From both the plots, RF has more spread across the bin whereas the XGBoost has a sharp spike at the lowest bin. This shows that the XGBoost heavily relies on few highly similar instances, whereas RF has spreads its attention.
 
-# 6. Conclusion 
+# Conclusion {#conclusion}
 
 The project aim is to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula in New Zealand. Based this project goal, using the Sentinel satellite images and plotted land cover class data shapes of the study area, three machine learning models (`Random Forest (RF)`, `XGBoost` & `Support Vector Machine (SVM)` are selected and trained with similar training control methods (Cross validation method and k-fold at 10). Out of the three models, `RF` and `XGBoost` model performs very well and `SVM` model is not upto par in classifying the land cover class using the satellite images.
 
