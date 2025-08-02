@@ -1,8 +1,23 @@
+# Predicting the Invasive Species 'Gorse (Ulex europaeus)' on Banks Peninsula, New Zealand 🌿
 
+**Land Cover Classification with Machine Learning Models in R**
 
+This project applies advanced machine learning techniques to classify land cover and predict the spread of the invasive plant species *Gorse (Ulex europaeus)* on Banks Peninsula, New Zealand. The models are trained on satellite imagery and geospatial datasets using R. A short statement and executive summary is given below. 
 
+---
+## Project Structure
 
-# Statements {#statements .unnumbered}
+- `01_data/` – Raw and pre-processed datasets (e.g., Sentinel imagery, land cover maps)
+- `report.Rmd` – RMarkdown file containing the full analysis
+- `report.html` – Rendered HTML report
+- `README.md` – Project description and documentation
+
+---
+
+> See the full report: [`report.html`](./report.html)
+
+---
+# Statements
 
 **Acknowledgement**\
 I am sincerely thank the OpenGeoHub Foundation for their work in making open source geospatial models for everyone. The videos posted in their website on tutorials to learn remote sensing concepts and understand the workflow structures in working with geospatial data analysis. Particular mention to the tutorial *"Machine Learning for Spatial Data"* by Dr. Hanna Meyer which helped me to work on this project.
@@ -12,7 +27,8 @@ Furthermore, I thank the professional certification courses relevant to understa
 **Use of generative artificial intelligence**\
 Generative artificial intelligence (GenAI) was mainly used for creating charts and adjusting visualization parameters in R. GenAI was also used for code debugging. However, the responses provided by GenAI were critically judged before being implemented.
 
-# Executive Summary {#executive-summary .unnumbered}
+---
+# Executive Summary 
 
 **Problem Statement**\
 **Gorse (*Ulex europaeus*)** plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmlands which is associated with negative consequences for the quality of the grassland. Each year millions of dollars are spent for its control and field sampling are expensive for developing management strategies. It's of high importance to map the distribution of such invasive plants using remote sensing methods.
