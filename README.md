@@ -1,4 +1,4 @@
-# Predicting the Invasive Species 'Gorse (Ulex europaeus)' on Banks Peninsula, New Zealand 🌿
+# Predicting the Invasive Species 'Gorse (Ulex europaeus)' on Banks Peninsula, New Zealand 
 
 **Land Cover Classification with Machine Learning Models in R**
 
