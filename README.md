@@ -41,8 +41,8 @@ Sentinel satellite data and plotted land cover class of a section of the Banks P
 
 **Methodology**\
 The following methodology was undertaken for this project,\
-- Raw data and land cover classes are visualized and merged to a single data set to build the Machine Learning models (`Random Forest`, `XGBoost` and `Support Vector Machine`).\
-- The merged data set is split into 30% training and 70% test data which is used to train and predict using the models.\
+- Raw data and land cover classes are visualized and merged to a single data set to build the Machine Learning models (`Random Forest`, `XGBoost` and `Support Vector Machine`).
+- The merged data set is split into 30% training and 70% test data which is used to train and predict using the models.
 - Various analysis such as confusion matrix, scoring metrics, predictive & entropy maps, and uncertainty diagnostics were performed to analyse the models performance in land cover classification and predicting the invasive plant species.
 
 **Results**\
