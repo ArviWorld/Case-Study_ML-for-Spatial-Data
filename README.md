@@ -14,7 +14,7 @@ This project applies advanced machine learning techniques to classify land cover
 
 ---
 
-> See the full report: [`report.html`](./report.html)
+> See the full report: [`Report.html`](./Report.html)
 
 ---
 # Statements
