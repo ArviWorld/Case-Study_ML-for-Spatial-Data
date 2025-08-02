@@ -15,14 +15,14 @@ output:
 
 # Table of Contents {.unnumbered}
 
-[Statements](#statements)
-[Executive Summary](#executive-summary)
-1.  [Introduction](#introduction)
-2.  [Aim and Methodology of this Project](#aim-and-methodology-of-this-project)
-3.  [Exploratory Data Analysis - EDA](#exploratory-data-analysis-EDA)
-4.  [Machine Learning Model](#machine-learning-model)
-5.  [Results](#results)
-6.  [Conclusion](#conclusion)
+[Statements](#statements)\
+[Executive Summary](#executive-summary)\
+1. [Introduction](#introduction)\
+2. [Aim and Methodology of this Project](#aim-and-methodology-of-this-project)\
+3. [Exploratory Data Analysis - EDA](#exploratory-data-analysis-EDA)\
+4. [Machine Learning Model](#machine-learning-model)\
+5. [Results & Discussion](#results-&-discussions)\
+6. [Conclusion](#conclusion)
 
 # Statements {#statements .unnumbered}
 
@@ -60,11 +60,11 @@ This project demonstrates land cover classifications in R using machine learning
 
 The focus is on land cover classification using sentinel satellite data, specifically targeting the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula. This plant was brought to New Zealand during the European settlement as a hedge plant and spreads into farmland which is associated with negative consequences for the quality of the grassland.
 
-Each year millions of dollars are spent for its control. To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field sampling means huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this tutorial, we're going to use Sentinel satellite imagery from 2017 to map the current land cover distribution on a section of the Banks Peninsula.
+Each year millions of dollars are spent for its control. To develop management strategies, it's of high importance to map the distribution of such invasive plants. Since field sampling means huge expenses, remote sensing methods are required for a spatially explicit monitoring. In this project, Sentinel satellite imagery from 2017 were used to map the current land cover distribution on a section of the Banks Peninsula.
 
 # Aim and Methodology of this Project {#aim-and-methodology-of-this-project}
 
-The project aim is to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula and focus on using machine learning algorithms such as Random Forests, XGBoost and SVM to perform this project. We show its performance and compare the results of the models.
+The project aim is to predict the invasive species **gorse (*Ulex europaeus*)** on the Banks Peninsula and focus on using machine learning algorithms such as Random Forests, XGBoost and SVM to perform this project.
 
 The following methodology was undertaken for this project,
 
@@ -74,7 +74,7 @@ The following methodology was undertaken for this project,
 
 -   Various analysis such as confusion matrix, scoring metrics, predictive & entropy maps, and uncertainty diagnostics were performed to analyse the models performance in land cover classification and predicting the invasive plant species.
 
-# Exploratory Data Analysis - EDA
+# Exploratory Data Analysis - EDA {#exploratory-data-analysis-EDA}
 
 This project shows the process of land cover (LC) classification using machine learning techniques using R. The focus is on classifying land cover types, particularly the invasive species **gorse (*Ulex europaeus*)**, using Sentinel satellite data.
 
@@ -134,18 +134,22 @@ To start with, loading the Sentinel data as well as a land cover class of the tr
 # Load Sentinel data
 sentinel <- stack("D:\\Study\\Machine Learning\\Geostatistics\\R-Git\\Case-Study_ML-for-Spatial-Data\\Data\\sentinel2017.grd")
 
+# Print the Sentinel data
+print(sentinel)
+
 # Load training sites shapefile
 training <- read_sf("D:\\Study\\Machine Learning\\Geostatistics\\R-Git\\Case-Study_ML-for-Spatial-Data\\Data\\trainingSites.shp")
 
-# Visualize the Sentinel data
-print(sentinel)
+# Print the training data
 print(training)
 
 ```
 
-**Overview of the data:** The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. We assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel Wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
+**Overview of the data:**\
+The Sentinel data is a stack of raster layers, The sentinel data subset for this tutorial contains the Sentinel channels 2-8 (visible and near infrared channels) as well as the NDVI and a yellowness index that was calculated as (red+green-blue)/(red+green+blue) as additional bands. Assume the yellowness index is valuable to distinguish the striking yellow color of the gorse from other vegetation.To get an idea about the band composition and spatial resolution, please check the Sentinel Wikipedia documentation [here](https://en.wikipedia.org/wiki/Sentinel-2#Data_products). The training sites are polygons that were digitized in QGIS on the basis of the Sentinel data using expert knowledge. The training dataset contains different land cover types, including gorse, grassland, and other vegetation types.
 
-**Visualize the data:** We visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
+**Visualize the data:**\
+Visualize the Sentinel data as a true color composite in the geographical context and overlay it with the polygons. Click on the polygons to see which land cover class is assigned to a respective polygon.
 
 ```{r visMV, warning=FALSE, message= FALSE}
 
@@ -157,9 +161,10 @@ viewRGB(sentinel, r=3, g=2, b=1, map.types = "Esri.WorldImagery") +
 
 ### Data Pre-processing {#data-pre-processing}
 
-We need to prepare the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the training shape file. This step is crucial for training the machine learning model. Then, we split the data into training and test data set to ensure that we can evaluate the model's performance on unseen data.
+Preparing the data for machine learning by extracting raster values for the training sites and merging them with the land cover class information from the training shape file. This step is crucial for training the machine learning model. Then, splitting the data into training and test data set to ensure the evaluation of the model's performance.
 
-**Extract raster information:** In order to train the Machine Learning model between the spectral properties and the land cover class, we first need to create a data frame that contains the spectral properties of the training sites as well as the corresponding class information. This data frame can be produced with the `extract` function. The resulting data frame contains the Sentinel data for each pixel overlayed by the polygons. This data frame then still needs to be merged with the information on the land cover class from the shape file. This happens via the ID of the polygons which are given in the extracted data frame by the column "ID" and in the shape file by the attribute "id".
+**Extract raster information:**\
+In order to train the Machine Learning model between the spectral properties and the land cover class, create a data frame that contains the spectral properties of the training sites as well as the corresponding class information. This data frame can be produced with the `extract` function. The resulting data frame contains the Sentinel data for each pixel overlayed by the polygons. This data frame then still needs to be merged with the information on the land cover class from the shape file. This happens via the ID of the polygons which are given in the extracted data frame by the column "ID" and in the shape file by the attribute "id".
 
 ```{r extract, warning=FALSE}
 
@@ -173,7 +178,8 @@ kable(head(extr), caption = "Merged Data") %>%
 
 ```
 
-**Splitting data into training and test data:** In order to keep data for a later (nearly) independent validation as well as to limit the number of data points so that the model training won't take long time, splitting the total data set into 30% training data and 70% test data is necessary. The more testing (unknown) data the higher the model accuracy. Caret's `createDataPartition` takes care that the class distribution is the same in both data sets.
+**Splitting data into training and test data:**\
+In order to keep data for a later (nearly) independent validation as well as to limit the number of data points so that the model training won't take long time, splitting the total data set into 30% training data and 70% test data is necessary. The more testing (unknown) data the higher the model accuracy. Caret's `createDataPartition` takes care that the class distribution is the same in both data sets.
 
 ```{r split, warning = FALSE}
 
@@ -202,7 +208,8 @@ kable(test_class, caption = "Test class balance") %>%
 
 Class balance inferences shows that there are severe class imbalance within both training and test data sets. It is required to balance the class using up-sampling as the `Water` has a high frequency and the remaining classes are similar to each other and much lower that the `Water`.
 
-**Visualize relationships:** To get an idea about the relationships between the spectral Sentinel data and the land cover class, we can visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
+**Visualize relationships:**\
+To get an idea about the relationships between the spectral Sentinel data and the land cover class, visualize how the different bands differs according to the land cover class. This helps us understand the distribution of different classes in the feature space.
 
 ```{r vis_relationships, warning=FALSE}
 
@@ -226,7 +233,8 @@ ggplot(trainDat, aes(x = factor(Class), y = NDVI)) +
 
 The box plots show the distribution of the yellowness index and NDVI for each land cover class, providing insights into how these indices vary across different classes. The Gorse class features the highest "yellowness" values while all other land cover classes have considerably lower values.
 
-**Feature Plot:** We can also get an impression about the separability of the classes by creating a feature plot that visualizes the location of the training samples in a scatter plot of two Sentinel channels.
+**Feature Plot:**\
+To get an impression about the separability of the classes by creating a feature plot that visualizes the location of the training samples in a scatter plot of two Sentinel channels.
 
 ```{r featurePlot, warning=FALSE}
 
@@ -246,7 +254,8 @@ The feature plot shows the distribution of training samples in the feature space
 
 The split data is now ready for training machine learning models and ready for implementation in the three different algorithms: `Random Forest`, `XGBoost`, and `Support Vector Machine (SVM)`. Each model will be trained on the training data set and evaluated on the test data set.
 
-**Selecting predictor and response variable:** Before building the ML models, all the Sentinel bands and indices were selected as the predictor variables and the land cover class were selected as the response variables. The response variable is categorical, while the predictor variables are continuous. From the data, we select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
+**Selecting predictor and response variable:**\
+Before building the ML models, all the Sentinel bands and indices were selected as the predictor variables and the land cover class were selected as the response variables. The response variable is categorical, while the predictor variables are continuous. From the data, select all the information from the sentinel raster data as the predictor variables and the land cover class as the response variable.
 
 ```{r select_vars, warning=FALSE}
 
@@ -260,7 +269,7 @@ response <- 'Class'
 
 ## Random Forest {#random-forest}
 
-Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis. Training the Random Forest model using the `randomForest` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+Random Forest is a popular ensemble learning method that constructs multiple decision trees and merges them together to get a more accurate and stable prediction. It is particularly effective for classification tasks and suits this LC classification analysis. Training the Random Forest model using the `randomForest` package in R. The model is trained on the training data set, and visualize the variable importance to understand which features contribute most to the classification. `train` function from the `caret` package was used to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r random_forest, warning=FALSE}
 
@@ -341,7 +350,8 @@ The Random Forest model is successfully trained and variable importance is noted
 
 The variable importance scores for each predictor variable is derived. The variable importance plot shows which features contribute most to the classification task, with the `NDVI`, `Yellowness` & `B05` being among the top 3 important predictors.
 
-**Predicting the test data with confusion matrix and scoring metrics:** To evaluate the performance of the Random Forest model on the test data set, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test data set.
+**Predicting the test data with confusion matrix and scoring metrics:**\
+To evaluate the performance of the Random Forest model on the test data set, confusion matrix and scoring metrics were calculated such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test data set.
 
 ```{r rf_confusion_matrix, warning=FALSE, message=FALSE}
 
@@ -383,7 +393,8 @@ kable(confusion_rf$byClass, caption = "Sensitivity and Specificity for Random Fo
 
 ```
 
-**Results:** Confusion Matrix and scoring metrics provide insights into the performance of the Random Forest model on the test data set. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+**Results:**\
+Confusion Matrix and scoring metrics provide insights into the performance of the Random Forest model on the test data set. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
 
 Predictions on the test/unseen data, confusion matrix shows high true positives for all the classes predictions with an overall accuracy of 99.5%, but do have some irregularities in the classification. From the confusion matrix,
 
@@ -401,7 +412,7 @@ This means that the `Urban`, `Bare` and `Sand` show very little false positives 
 
 ## XGBoost (Extreme Gradient Boosting)
 
-XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large data sets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+XGBoost (Extreme Gradient Boosting) is a powerful and efficient implementation of gradient boosting that is widely used for classification tasks. It is known for its speed and performance, making it suitable for large data sets. Training the XGBoost model using the `xgboost` package in R. The model is trained on the training data set, and visualize the variable importance to understand which features contribute most to the classification. `train` function from the `caret` package was used to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r xgboost, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -488,7 +499,8 @@ The XGBoost model has been trained successfully with the selected hyperparameter
 
 These score are very similar to the Random Forest Model and will be compared in the results and discussion section.
 
-**Predicting the test data with confusion matrix and scoring metrics:** To evaluate the performance of the XGBoost model on the test data set, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test data set.
+**Predicting the test data with confusion matrix and scoring metrics:**\
+To evaluate the performance of the XGBoost model on the test data set, confusion matrix and calculate scoring metrics were calculated such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test data set.
 
 ```{r xgb_confusion_matrix}
 
@@ -528,7 +540,8 @@ kable(confusion_xgb$byClass, caption = "Sensitivity and Specificity for XGBoost 
 
 ```
 
-**Results** Confusion Matrix and scoring metrics provide insights into the performance of the XGBoost model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
+**Results**\
+Confusion Matrix and scoring metrics provide insights into the performance of the XGBoost model on the test dataset. The confusion matrix shows how many instances were correctly classified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) quantify the model's overall performance.
 
 Predictions on the test/unseen data for the XGBoost model, confusion matrix shows high true positives for all the classes predictions with an overall accuracy of 99.27%, but do have some irregularities in the classification. From the confusion matrix,
 
@@ -548,7 +561,7 @@ This means that the `Urban`, `Sand`, `Gorse`, `Bush` and `Bare` show little fals
 
 ## Support Vector Machine (SVM) {#support-vector-machine-svm}
 
-Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training data set, and we can visualize the variable importance to understand which features contribute most to the classification. We use the `train` function from the `caret` package to train the model with 10-fold cross-validation for hyperparameter tuning.
+Support Vector Machine (SVM) is a supervised learning algorithm that can be used for classification tasks. It works by finding the hyperplane that best separates the classes in the feature space. SVM is effective in high-dimensional spaces and is suitable for this LC classification analysis. Training the SVM model using the `e1071` package in R. The model is trained on the training data set, and visualize the variable importance to understand which features contribute most to the classification. `train` function from the `caret` package was used to train the model with 10-fold cross-validation for hyperparameter tuning.
 
 ```{r svm, echo=TRUE, warning=FALSE}
 
@@ -615,7 +628,8 @@ ggplot(importance_svm, aes(x = reorder(Variable, Overall), y = Overall)) +
 
 The SVM model is trained, summary results and variable importance are noted for the determining which predictor variable (sentinel bands) has overall contributions to this classification.The variable importance scores for each predictor variable is derived. The variable importance plot shows which features contribute most to the classification task, with the `NDVI`, `B04` & `Yellowness` being among the top 3 important predictors for the XGBoost model.
 
-**Predicting the test data with confusion matrix and scoring metrics:** To evaluate the performance of the SVM model on the test data set, we can create a confusion matrix and calculate scoring metrics such as accuracy, sensitivity, and specificity. The confusion matrix provides insights into how well the model performs on the test data set.
+**Predicting the test data with confusion matrix and scoring metrics:**\
+To evaluate the performance of the SVM model on the test data set, confusion matrix and scoring metrics such as accuracy, sensitivity, and specificity were calculted. The confusion matrix provides insights into how well the model performs on the test data set.
 
 ```{r svm_confusion_matrix, warning=FALSE, message=FALSE}
 
@@ -662,11 +676,12 @@ kable(confusion_svm$byClass, caption = "Sensitivity and Specificity for Support 
 
 ```
 
-**Results** Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test data set. The confusion matrix shows how many instances were highly misclassified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) shows the model's poor performance.
+**Results**\
+Confusion Matrix and scoring metrics provide insights into the performance of the Support Vector Machine (SVM) model on the test data set. The confusion matrix shows how many instances were highly misclassified for each land cover class, while the scoring metrics (accuracy, sensitivity, specificity) shows the model's poor performance.
 
 The SVM model has not been trained successfully because the model achieved poor performance having very low scores for the different scoring matrix. The confusion matrix shows that the model has not classified the defined land cover classes as there are lot of misclassification. Hence the model does not fit this land cover classification and will not be further used to compare the models and assess the results and discussions of this project.
 
-# Results & Discussions
+# Results & Discussions {#results-&-discussions}
 
 ## Predicted maps {#predicted-maps}
 
@@ -727,7 +742,8 @@ mapview(raster_xgb, col.regions = palette, na.color = NA) +
 
 ```
 
-**Discussions:** The predicted thematic maps are overlayed with the training land cover classes to visually validated the model performance. Based on the maps, although there are slight misclassifications, both the models shows utmost accurate classification as indicated by the confusion matrix and scoring metrics. Out of the two, `Random Forest` shows better performance in land cover classification.
+**Discussions:**\
+The predicted thematic maps are overlayed with the training land cover classes to visually validated the model performance. Based on the maps, although there are slight misclassifications, both the models shows utmost accurate classification as indicated by the confusion matrix and scoring metrics. Out of the two, `Random Forest` shows better performance in land cover classification.
 
 ## Model Performance & Uncertainly Analysis
 
@@ -735,7 +751,7 @@ Uncertainty analysis aims to quantify the reliability of predicted land cover ma
 
 **1. Confusion matrices & Scoring metrics**
 
-Comparing the Confusion matrices of the models, we can see how well each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows us to assess the strengths and weaknesses of each model in terms of classification accuracy.
+Comparing the Confusion matrices of the models to verify each model performed in classifying the land cover types. The confusion matrices show the number of true positives, false positives, true negatives, and false negatives for each class. This allows to assess the strengths and weaknesses of each model in terms of classification accuracy.
 
 ```{r confusion_matrices, message=FALSE}
 
@@ -784,9 +800,11 @@ ggplot(scoring_df_long, aes(x = Metric, y = Score, fill = Model)) +
 
 ```
 
-**Discussion - Model Performance:** Confusion matrix from `Random Forest` and `XGBoost` are shown here. As per the results from the confusion matrix, the `Random Forest` Model scores high true positives and very low false positives, when compared with the `XGBoost` model. Furthermore, the scoring metrics provide a comprehensive overview of the performance of each model. The `Random Forest` model achieved the highest accuracy compared to the `XGBoost`. The precision and sensitivity scores indicate that Random Forest performed well in identifying the **gorse** class than the `XGBoost`. The F1 score, which balances precision and recall, also shows that `Random Forest` outperformed `XGBoost`.
+**Discussion - Model Performance:**\
+Confusion matrix from `Random Forest` and `XGBoost` are shown here. As per the results from the confusion matrix, the `Random Forest` Model scores high true positives and very low false positives, when compared with the `XGBoost` model. Furthermore, the scoring metrics provide a comprehensive overview of the performance of each model. The `Random Forest` model achieved the highest accuracy compared to the `XGBoost`. The precision and sensitivity scores indicate that Random Forest performed well in identifying the **gorse** class than the `XGBoost`. The F1 score, which balances precision and recall, also shows that `Random Forest` outperformed `XGBoost`.
 
-**2. Probability-based Entropy Maps (for uncertainty)** For this uncertainity analysis, first predicting the class probabilities for the models is required. With the predicted class probabilities, entropy per pixel is calculated and then map these entropy values as a raster data.
+**2. Probability-based Entropy Maps (for uncertainty)**\
+For this uncertainity analysis, first predicting the class probabilities for the models is required. With the predicted class probabilities, entropy per pixel is calculated and then map these entropy values as a raster data.
 
 ```{r entropy map}
 
@@ -857,9 +875,11 @@ p_xgb
 par(mfrow=c(1,1))                               
 ```
 
-**Discussion** These entropy maps shows the uncertainity in the predictions in the model. More yellow the higher entropy and more purple the lower entropy. Low entropy signifies the confidence in predictions where high entropy shows the uncertaininty and might be similar probabilities to multiple class. In these maps, RF entropy maps shows more gradual transitions and less extreme entropy which means that the model could be robust to noise and less flexible. On the contrary, XGBoost shows sharper contrasts and more high entropy areas particularty at the class boundaries. This could mean the model classification is sensitive to the class boundaries and also could be the problem of overfitting.
+**Discussion**\
+These entropy maps shows the uncertainity in the predictions in the model. More yellow the higher entropy and more purple the lower entropy. Low entropy signifies the confidence in predictions where high entropy shows the uncertaininty and might be similar probabilities to multiple class. In these maps, RF entropy maps shows more gradual transitions and less extreme entropy which means that the model could be robust to noise and less flexible. On the contrary, XGBoost shows sharper contrasts and more high entropy areas particularty at the class boundaries. This could mean the model classification is sensitive to the class boundaries and also could be the problem of overfitting.
 
-**3. DALEX Uncertainity Analysis** To gain insights into the uncertainty of the model predictions, we can use the DALEX (Descriptive mAchine Learning EXplanations) package designed to help understand and explain complex machine learning models. DALEX allows to explore the model performance and diagnostics for each model. This allows us to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
+**3. DALEX Uncertainity Analysis**\
+To gain insights into the uncertainty of the model predictions, the DALEX (Descriptive mAchine Learning EXplanations) package was designed to help understand and explain complex machine learning models. DALEX allows to explore the model diagnostics for each model. This allows to analyze the model's predictions and understand how different features contribute to the uncertainty in the predictions.
 
 ```{r uncertainty_analysis, message=FALSE, warning=FALSE}
 
@@ -910,7 +930,8 @@ ggplot(combined_hist, aes(x = Var1, y = Freq, fill = direction)) +
 
 ```
 
-**Discussion:** Both the models show a sharp spike at very low bin distance bins which means that the test dataset is highly similar to the training dataset, particularly in the XGBoost. This suggests that both models use very similar training data to make predictions. In the RF model, the model red bar are all negative, which shows that the test data as a whole is less similar to the entire training data distribution. This suggests that the RF model has some overfitting and learned well from local structures. From both the plots, RF has more spread across the bin whereas the XGBoost has a sharp spike at the lowest bin. This shows that the XGBoost heavily relies on few highly similar instances, whereas RF has spreads its attention.
+**Discussion:**\
+Both the models show a sharp spike at very low bin distance bins which means that the test dataset is highly similar to the training dataset, particularly in the XGBoost. This suggests that both models use very similar training data to make predictions. In the RF model, the model red bar are all negative, which shows that the test data as a whole is less similar to the entire training data distribution. This suggests that the RF model has some overfitting and learned well from local structures. From both the plots, RF has more spread across the bin whereas the XGBoost has a sharp spike at the lowest bin. This shows that the XGBoost heavily relies on few highly similar instances, whereas RF has spreads its attention.
 
 # Conclusion {#conclusion}
 
