@@ -7,7 +7,7 @@ This project applies advanced machine learning techniques to classify land cover
 ---
 ## Project Structure
 
-- `01_data/` – Raw and pre-processed datasets (e.g., Sentinel imagery, land cover maps)
+- `data/` – Raw and pre-processed datasets (e.g., Sentinel imagery, land cover maps)
 - `report.Rmd` – RMarkdown file containing the full analysis
 - `report.html` – Rendered HTML report
 - `README.md` – Project description and documentation
