@@ -11,7 +11,7 @@ output:
     toc_float: true
     number_sections: true
     toc_depth: 3
----
+--- 
 
 # Table of Contents {.unnumbered}
 
